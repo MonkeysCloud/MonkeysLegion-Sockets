@@ -167,6 +167,8 @@ final class StreamSocketDriver implements DriverInterface
             return;
         }
 
+        $connection->touch();
+
         try {
             // Phase A: Perform WebSocket Handshake if not already done
             if (!$this->handshaked[$streamId]) {

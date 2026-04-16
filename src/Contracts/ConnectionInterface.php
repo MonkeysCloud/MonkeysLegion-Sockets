@@ -25,6 +25,16 @@ interface ConnectionInterface
     public function close(int $code = 1000, string $reason = ''): void;
 
     /**
+     * Get the timestamp of the last activity on this connection.
+     */
+    public function lastActivity(): int;
+
+    /**
+     * Update the last activity timestamp to the current time.
+     */
+    public function touch(): void;
+
+    /**
      * Get metadata associated with the connection (e.g., query params, headers).
      * 
      * @return array<string, mixed>

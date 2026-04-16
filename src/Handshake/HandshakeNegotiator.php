@@ -24,6 +24,7 @@ final readonly class HandshakeNegotiator
 
     public function __construct(
         private ResponseFactoryInterface $responseFactory,
+        private ?\MonkeysLegion\Sockets\Contracts\AuthenticatorInterface $authenticator = null,
     ) {}
 
     /**
@@ -36,7 +37,12 @@ final readonly class HandshakeNegotiator
         // 1. Validate that the request headers meet the RFC 6455 requirements
         $this->validateRequest($request);
 
-        // 2. Extract the client-provided security key
+        // 2. Perform optional authentication
+        if ($this->authenticator && !$this->authenticator->authenticate($request)) {
+            throw new HandshakeException('Authentication failed');
+        }
+
+        // 3. Extract the client-provided security key
         $key = $request->getHeaderLine('Sec-WebSocket-Key');
 
         // 3. Generate the Accept key by hashing the Client Key with the GUID

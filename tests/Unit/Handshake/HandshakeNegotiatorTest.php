@@ -96,4 +96,29 @@ final class HandshakeNegotiatorTest extends TestCase
 
         $negotiator->negotiate($request);
     }
+
+    #[Test]
+    public function it_throws_exception_if_authentication_fails(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getHeaderLine')->willReturnCallback(fn($n) => match ($n) {
+            'Sec-WebSocket-Version' => '13',
+            'Upgrade' => 'websocket',
+            'Connection' => 'Upgrade',
+            default => ''
+        });
+        $request->method('hasHeader')->willReturn(true);
+
+        $authenticator = $this->createStub(\MonkeysLegion\Sockets\Contracts\AuthenticatorInterface::class);
+        $authenticator->method('authenticate')->willReturn(false);
+
+        $factory = $this->createStub(ResponseFactoryInterface::class);
+        $negotiator = new HandshakeNegotiator($factory, $authenticator);
+
+        $this->expectException(HandshakeException::class);
+        $this->expectExceptionMessage('Authentication failed');
+
+        $negotiator->negotiate($request);
+    }
 }

@@ -11,6 +11,7 @@ MonkeysLegion Sockets is a modern PHP WebSocket library designed for reliability
 - **RFC 6455 Compliant**: Full support for the WebSocket protocol, including binary payloads and masking.
 - **Zero-Trust Testing**: Comprehensive test suite with absolute zero tolerance for deprecations or notices.
 - **Optimized Performance**: Global namespace function lookups for maximum execution speed.
+- **Security Oriented**: O(1) connection registries and complexity-hardened cleanup logic.
 
 ## 🛠️ Setup
 
@@ -42,7 +43,16 @@ composer require monkeyscloud/monkeyslegion-sockets
    composer analyze
    ```
 
-## 🏗️ Phase 1 Progress: The Foundation
+## 🏗️ Phase 2 Progress: Connection & State ✅
+
+Phase 2 has been completed, focusing on managing thousands of connections securely:
+
+- **O(1) Connection Registry**: A high-performance store with bidirectional mapping for instant lookups and cleanup.
+- **Tagging & Groups**: Built-in support for "Rooms" / "Topics" for targeted broadcasting.
+- **Heartbeat Manager**: Automated Ping/Pong cycles to prune dead connections and maintain state.
+- **Handshake Authentication**: Plug-and-play authentication middleware for JWT, Session, or API Key validation.
+
+## 🏗️ Phase 1 Progress: The Foundation ✅
 
 Phase 1 has been successfully established the core infrastructure of the library:
 

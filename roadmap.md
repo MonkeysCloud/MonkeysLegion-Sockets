@@ -28,14 +28,14 @@ To provide a "ready-to-go" WebSocket solution that feels native to PHP developer
 - [x] **Frame Handling:** Robust encoding/decoding of WebSocket frames (Masking, OpCodes, Fragmentation, and Binary payload support).
 - [x] **SSL/TLS Support:** Native encryption support for Stream Sockets via SSL contexts.
 
-### Phase 2: High-Performance Drivers & Scaling
+### Phase 2: High-Performance Drivers & Scaling ✅
 
+- [x] **Connection Management:** Efficiently store and retrieve active connections (Registry pattern).
+- [x] **Heartbeat System:** Built-in Ping/Pong management to prune "ghost" clients.
+- [x] **Authentication Middleware:** Secure handshake validation (JWT/Session).
 - [ ] **Swoole Driver:** Optional driver for extreme high-concurrency environments.
-
 - [ ] **ReactPHP/Amp Driver:** Integration for users already within an async ecosystem.
-- [ ] **Connection Management:** Efficiently store and retrieve active connections (Registry pattern).
 - [ ] **Write Buffering & Backpressure:** Non-blocking write queues to prevent slow clients from stalling the event loop.
-- [ ] **Heartbeat System:** Built-in Ping/Pong management to prune "ghost" clients.
 
 ### Phase 3: The Integration Layer (The "Bridge")
 

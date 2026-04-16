@@ -16,6 +16,8 @@ use MonkeysLegion\Sockets\Frame\FrameProcessor;
  */
 final class StreamConnection implements ConnectionInterface
 {
+    private int $lastActivity;
+
     /**
      * @param resource $resource The raw PHP stream resource.
      * @param array<string, mixed> $metadata
@@ -29,6 +31,7 @@ final class StreamConnection implements ConnectionInterface
         if (!\is_resource($this->resource)) {
             throw new \InvalidArgumentException('Valid resource expected');
         }
+        $this->lastActivity = \time();
     }
 
     /**
@@ -49,6 +52,7 @@ final class StreamConnection implements ConnectionInterface
             : $this->frameProcessor->encode($message);
 
         @\fwrite($this->resource, $data);
+        $this->touch();
     }
 
     /**
@@ -83,5 +87,21 @@ final class StreamConnection implements ConnectionInterface
     public function getResource(): mixed
     {
         return $this->resource;
+    }
+
+    /**
+     * Get the timestamp of the last activity.
+     */
+    public function lastActivity(): int
+    {
+        return $this->lastActivity;
+    }
+
+    /**
+     * Update the last activity timestamp.
+     */
+    public function touch(): void
+    {
+        $this->lastActivity = \time();
     }
 }
