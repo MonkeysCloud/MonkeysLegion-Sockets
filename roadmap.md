@@ -20,14 +20,13 @@ To provide a "ready-to-go" WebSocket solution that feels native to PHP developer
 
 ## 🗺️ Development Phases
 
-### Phase 1: The Core Infrastructure (The Foundation)
+### Phase 1: The Core Infrastructure (The Foundation) ✅
 
-- [ ] **Interface Definition:** Create `DriverInterface`, `ConnectionInterface`, and `MessageInterface`.
-
-- [ ] **Handshake Engine:** Implement a PSR-7 compliant negotiator to upgrade HTTP connections to WebSockets (RFC 6455).
-- [ ] **Native Driver:** Implement the `StreamSocketDriver` using native PHP `stream_socket_server`.
-- [ ] **Frame Handling:** Robust encoding/decoding of WebSocket frames (Masking, OpCodes, Fragmentation, and Binary payload support).
-- [ ] **SSL/TLS Support:** Native encryption support for Stream Sockets via SSL contexts.
+- [x] **Interface Definition:** Create `DriverInterface`, `ConnectionInterface`, and `MessageInterface`.
+- [x] **Handshake Engine:** Implement a PSR-7 compliant negotiator to upgrade HTTP connections to WebSockets (RFC 6455).
+- [x] **Native Driver:** Implement the `StreamSocketDriver` using native PHP `stream_socket_server`.
+- [x] **Frame Handling:** Robust encoding/decoding of WebSocket frames (Masking, OpCodes, Fragmentation, and Binary payload support).
+- [x] **SSL/TLS Support:** Native encryption support for Stream Sockets via SSL contexts.
 
 ### Phase 2: High-Performance Drivers & Scaling
 

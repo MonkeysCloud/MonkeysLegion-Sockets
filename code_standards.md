@@ -15,6 +15,7 @@
 | **PSR Compliance** | PSR-1, PSR-4, PSR-7, PSR-11, PSR-12, PSR-15. |
 | **Zero Magic** | No `__get`, `__set`, or `__call`. Use native property hooks and asymmetric visibility. |
 | **Modular** | Every package must be installable independently. |
+| **Performance** | Native PHP functions MUST be called from the global namespace (e.g., `\strlen()`) to optimize opcode lookups. |
 
 ---
 
@@ -163,6 +164,7 @@ final class ProcessPayment implements ShouldQueue {
 *   **PHPStan:** Level 9 mandatory.
 *   **PHPUnit:** Coverage ≥80%.
 *   **Naming:** `test_{action}_{scenario}_{expectedResult}`.
+*   **Zero Tolerance:** Notices, deprecations, and warnings are NOT allowed in tests unless explicitly enabled for specific test cases.
 
 ---
 
