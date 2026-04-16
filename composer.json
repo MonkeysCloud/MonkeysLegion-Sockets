@@ -1,0 +1,28 @@
+{
+    "name": "monkeyscloud/monkeyslegion-sockets",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "MonkeysLegion\\Sockets\\": "src/",
+            "MonkeysLegion\\Sockets\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Amanar Marouane",
+            "email": "marouane.amanar07@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "psr/http-message": "^2.0@dev",
+        "psr/http-factory": "^1.1",
+        "psr/container": "^2.0@dev",
+        "psr/log": "^3.0@dev"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "2.2.x-dev",
+        "phpunit/phpunit": "^13.2@dev"
+    }
+}
