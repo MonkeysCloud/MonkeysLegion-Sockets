@@ -42,19 +42,19 @@ To provide a "ready-to-go" WebSocket solution that feels native to PHP developer
 
 ### Phase 3: The Integration Layer (The "Bridge")
 
-- [ ] **Broadcaster Component:** A mechanism to allow standard PHP-FPM requests to trigger broadcasts.
+- [x] **Broadcaster Component:** A mechanism to allow standard PHP-FPM requests to trigger broadcasts.
 
-- [ ] **Redis Pub/Sub Adapter:** The primary bridge for horizontal scaling.
-- [ ] **Internal IPC:** Unix Socket or Shared Memory bridge for single-server setups.
-- [ ] **Authentication Handlers:** Defined `AuthenticatorInterface` for JWT and Session-based handshakes.
-- [ ] **Middleware Support:** Allow custom logic (Rate Limiting, IP Filtering) during the handshake.
+- [x] **Redis Pub/Sub Adapter:** The primary bridge for horizontal scaling.
+- [x] **Internal IPC:** Unix Socket or Shared Memory bridge for single-server setups. (Verified ✅)
+- [x] **Authentication Handlers:** Defined `AuthenticatorInterface` for JWT and Session-based handshakes.
+- [x] **Middleware Support:** Allow custom logic (Rate Limiting, IP Filtering) during the handshake.
 
 ### Phase 4: Message Protocol & UX
 
 - [ ] **Payload Formatters:** Default JSON formatter with support for custom implementations (Protobuf, MessagePack).
 
 - [ ] **Channel/Room Logic:** Support for `join()`, `leave()`, and `to('room_name')->emit()`.
-- [ ] **CLI Tooling:** A `bin/websocket` command to manage the server lifecycle (Start, Stop, Status).
+- [ ] **CLI Tooling:** A `bin/ml-ws` command to manage the server lifecycle (Start, Stop, Status).
 - [ ] **Client-side JS:** A lightweight, zero-dependency JavaScript wrapper to handle auto-reconnects.
 
 ### Phase 5: The Frontend (JS Client)

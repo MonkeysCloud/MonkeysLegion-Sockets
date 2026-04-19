@@ -111,7 +111,7 @@ final class HandshakeNegotiatorTest extends TestCase
         $request->method('hasHeader')->willReturn(true);
 
         $authenticator = $this->createStub(\MonkeysLegion\Sockets\Contracts\AuthenticatorInterface::class);
-        $authenticator->method('authenticate')->willReturn(false);
+        $authenticator->method('authenticate')->willReturn(null);
 
         $factory = $this->createStub(ResponseFactoryInterface::class);
         $negotiator = new HandshakeNegotiator($factory, $authenticator);
@@ -119,6 +119,88 @@ final class HandshakeNegotiatorTest extends TestCase
         $this->expectException(HandshakeException::class);
         $this->expectExceptionMessage('Authentication failed');
 
+        $negotiator->negotiate($request);
+    }
+
+    #[Test]
+    public function it_successfully_authenticates(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getHeaderLine')->willReturnCallback(fn($n) => match ($n) {
+            'Sec-WebSocket-Version' => '13',
+            'Upgrade' => 'websocket',
+            'Connection' => 'Upgrade',
+            'Sec-WebSocket-Key' => 'key123',
+            default => ''
+        });
+        $request->method('hasHeader')->willReturn(true);
+
+        $authenticator = $this->createStub(\MonkeysLegion\Sockets\Contracts\AuthenticatorInterface::class);
+        $authenticator->method('authenticate')->willReturn('user_789');
+
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('withHeader')->willReturn($response);
+
+        $factory = $this->createStub(ResponseFactoryInterface::class);
+        $factory->method('createResponse')->willReturn($response);
+        
+        $negotiator = new HandshakeNegotiator($factory, $authenticator);
+        $result = $negotiator->negotiate($request);
+        
+        $this->assertSame($response, $result);
+    }
+
+    #[Test]
+    public function it_throws_exception_if_missing_connection_header(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getHeaderLine')->willReturnCallback(fn($n) => match($n) {
+            'Upgrade' => 'websocket',
+            default => ''
+        });
+
+        $negotiator = new HandshakeNegotiator($this->createStub(ResponseFactoryInterface::class));
+        $this->expectException(HandshakeException::class);
+        $this->expectExceptionMessage('Missing "Connection: Upgrade" header');
+        $negotiator->negotiate($request);
+    }
+
+    #[Test]
+    public function it_throws_exception_if_missing_security_key(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getHeaderLine')->willReturnCallback(fn($n) => match($n) {
+            'Upgrade' => 'websocket',
+            'Connection' => 'upgrade',
+            default => ''
+        });
+        $request->method('hasHeader')->willReturn(false);
+
+        $negotiator = new HandshakeNegotiator($this->createStub(ResponseFactoryInterface::class));
+        $this->expectException(HandshakeException::class);
+        $this->expectExceptionMessage('Missing "Sec-WebSocket-Key" header');
+        $negotiator->negotiate($request);
+    }
+
+    #[Test]
+    public function it_throws_exception_if_unsupported_version(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getHeaderLine')->willReturnCallback(fn($n) => match($n) {
+            'Upgrade' => 'websocket',
+            'Connection' => 'upgrade',
+            'Sec-WebSocket-Version' => '99',
+            default => ''
+        });
+        $request->method('hasHeader')->willReturn(true);
+
+        $negotiator = new HandshakeNegotiator($this->createStub(ResponseFactoryInterface::class));
+        $this->expectException(HandshakeException::class);
+        $this->expectExceptionMessage('Only WebSocket version 13 is supported');
         $negotiator->negotiate($request);
     }
 }

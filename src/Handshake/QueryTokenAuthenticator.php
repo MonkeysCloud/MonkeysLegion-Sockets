@@ -24,11 +24,11 @@ class QueryTokenAuthenticator implements AuthenticatorInterface
         private readonly string $queryParam = 'token'
     ) {}
 
-    public function authenticate(ServerRequestInterface $request): bool
+    public function authenticate(ServerRequestInterface $request): ?string
     {
         $params = $request->getQueryParams();
         $token = $params[$this->queryParam] ?? null;
 
-        return $token === $this->correctToken;
+        return $token === $this->correctToken ? $token : null;
     }
 }

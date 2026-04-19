@@ -9,13 +9,14 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * AuthenticatorInterface
  * 
- * Defines the contract for validating a client during the WebSocket handshake.
+ * Defines how to authenticate a WebSocket connection attempt 
+ * during the initial HTTP handshake.
  */
 interface AuthenticatorInterface
 {
     /**
-     * Authenticate the request. 
-     * Returns true if allowed, false or throws exception if denied.
+     * Authenticate the request.
+     * Returns a string identifier (e.g. User ID) if successful, null otherwise.
      */
-    public function authenticate(ServerRequestInterface $request): bool;
+    public function authenticate(ServerRequestInterface $request): ?string;
 }
