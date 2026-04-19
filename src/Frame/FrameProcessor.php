@@ -119,7 +119,7 @@ final readonly class FrameProcessor
             throw new \RuntimeException('Invalid UTF-8 sequence in text frame', 1007);
         }
 
-        return new Frame($payload, $opcode, $isFinal, $isMasked, $maskingKey);
+        return new Frame($payload, $opcode, $isFinal, $isMasked, $maskingKey, $offset + (int) $payloadLength);
     }
 
     /**

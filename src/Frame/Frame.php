@@ -20,7 +20,13 @@ final class Frame implements MessageInterface
         private readonly bool $isFinal = true,
         private readonly bool $isMasked = false,
         private readonly ?string $maskingKey = null,
+        private readonly int $consumedLength = 0,
     ) {}
+
+    public function getConsumedLength(): int
+    {
+        return $this->consumedLength;
+    }
 
     /**
      * Get the raw payload data of the frame.

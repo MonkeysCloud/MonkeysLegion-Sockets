@@ -25,10 +25,9 @@ final class MessageAssembler
     ) {}
 
     /**
-     * Add a frame to the assembler.
-     * Returns a completed Frame object if the message is fully assembled, null otherwise.
+     * @param string|int $streamId
      */
-    public function assemble(int $streamId, Frame $frame): ?Frame
+    public function assemble(string|int $streamId, Frame $frame): ?Frame
     {
         $opcode = $frame->getOpcode();
 
@@ -77,9 +76,9 @@ final class MessageAssembler
     }
 
     /**
-     * Clear the buffer for a specific stream.
+     * @param string|int $streamId
      */
-    public function clear(int $streamId): void
+    public function clear(string|int $streamId): void
     {
         unset($this->buffers[$streamId], $this->opcodes[$streamId]);
     }

@@ -13,4 +13,10 @@ interface RedisClientInterface
     public function sRem(string $key, string $value): int;
     public function sMembers(string $key): array;
     public function del(string $key): int;
+    public function publish(string $channel, string $message): int;
+
+    /**
+     * @param callable(string, string): void $callback
+     */
+    public function subscribe(array $channels, callable $callback): void;
 }

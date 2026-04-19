@@ -33,9 +33,12 @@ To provide a "ready-to-go" WebSocket solution that feels native to PHP developer
 - [x] **Connection Management:** Efficiently store and retrieve active connections (Registry pattern).
 - [x] **Heartbeat System:** Built-in Ping/Pong management to prune "ghost" clients.
 - [x] **Authentication Middleware:** Secure handshake validation (JWT/Session).
-- [ ] **Swoole Driver:** Optional driver for extreme high-concurrency environments.
-- [ ] **ReactPHP/Amp Driver:** Integration for users already within an async ecosystem.
-- [ ] **Write Buffering & Backpressure:** Non-blocking write queues to prevent slow clients from stalling the event loop.
+- [x] **Write Buffering & Backpressure:** Non-blocking write queues to prevent slow clients from stalling the event loop.
+- [x] **Fragmentation Support:** Transparent message reassembly for multi-frame payloads.
+- [x] **Distributed Scaling:** Redis-backed registry for multi-node room membership.
+- [x] **Security Audit:** Hardened against Slow-Loris, OOM, and UTF-8 injection.
+- [x] **Swoole Driver:** Optional driver for extreme high-concurrency environments.
+- [x] **ReactPHP/Amp Driver:** Integration for users already within an async ecosystem.
 
 ### Phase 3: The Integration Layer (The "Bridge")
 

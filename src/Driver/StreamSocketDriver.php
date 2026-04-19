@@ -9,6 +9,7 @@ use MonkeysLegion\Sockets\Contracts\DriverInterface;
 use MonkeysLegion\Sockets\Frame\FrameProcessor;
 use MonkeysLegion\Sockets\Frame\MessageAssembler;
 use MonkeysLegion\Sockets\Handshake\HandshakeNegotiator;
+use MonkeysLegion\Sockets\Handshake\ResponseFactory;
 use MonkeysLegion\Sockets\Handshake\RequestParser;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -43,10 +44,13 @@ final class StreamSocketDriver implements DriverInterface
     /** @var bool Loop state control */
     private bool $running = false;
 
+    /** @var array<int, string> Input buffers */
+    private array $buffers = [];
+
     public function __construct(
         private readonly FrameProcessor $frameProcessor = new FrameProcessor(),
         private readonly MessageAssembler $assembler = new MessageAssembler(),
-        private readonly ?HandshakeNegotiator $negotiator = null,
+        private readonly HandshakeNegotiator $negotiator = new HandshakeNegotiator(new ResponseFactory()),
         private readonly LoggerInterface $logger = new NullLogger()
     ) {}
 
@@ -178,14 +182,24 @@ final class StreamSocketDriver implements DriverInterface
             return;
         }
 
+        $this->buffers[$streamId] ??= '';
+        $this->buffers[$streamId] .= $data;
+
         $connection->touch();
 
         try {
             if (!$this->handshaked[$streamId]) {
                 $this->performHandshake($streamId, $data);
             } else {
-                $frame = $this->frameProcessor->decode($data);
-                if ($frame) {
+                while (\strlen($this->buffers[$streamId]) >= 2) {
+                    $frame = $this->frameProcessor->decode($this->buffers[$streamId]);
+                    if (!$frame) {
+                        break;
+                    }
+
+                    // Slice exactly what was consumed
+                    $this->buffers[$streamId] = \substr($this->buffers[$streamId], $frame->getConsumedLength());
+
                     $assembled = $this->assembler->assemble($streamId, $frame);
                     if ($assembled && isset($this->callbacks['message'])) {
                         ($this->callbacks['message'])($connection, $assembled);

@@ -16,10 +16,18 @@
     ],
     "minimum-stability": "dev",
     "require": {
+        "php": ">=8.4",
+        "ext-json": "*",
+        "ext-mbstring": "*",
         "psr/http-message": "^2.0@dev",
         "psr/http-factory": "^1.1",
         "psr/container": "^2.0@dev",
-        "psr/log": "^3.0@dev"
+        "psr/log": "^3.0@dev",
+        "react/socket": "^1.16"
+    },
+    "suggest": {
+        "ext-swoole": "Provides high-performance multi-threaded WebSocket transport (>= 6.0 recommended)",
+        "ext-redis": "Required for the distributed RedisConnectionRegistry"
     },
     "require-dev": {
         "phpstan/phpstan": "2.2.x-dev",
