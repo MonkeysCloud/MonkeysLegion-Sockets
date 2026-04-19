@@ -27,6 +27,23 @@ interface ConnectionRegistryInterface
     public function get(string $id): ?ConnectionInterface;
 
     /**
+     * Tag a connection (e.g., join a room).
+     */
+    public function tag(string|ConnectionInterface $connection, string $tag): void;
+
+    /**
+     * Untag a connection (e.g., leave a room).
+     */
+    public function untag(string|ConnectionInterface $connection, string $tag): void;
+
+    /**
+     * Get all connections belonging to a specific tag.
+     * 
+     * @return iterable<ConnectionInterface>
+     */
+    public function getByTag(string $tag): iterable;
+
+    /**
      * Get all active connections.
      * 
      * @return iterable<ConnectionInterface>

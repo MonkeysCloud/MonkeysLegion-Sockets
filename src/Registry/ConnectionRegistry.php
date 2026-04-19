@@ -9,12 +9,14 @@ use MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface;
 use Countable;
 use IteratorAggregate;
 use Traversable;
+use WeakMap;
 
 /**
  * ConnectionRegistry
  * 
  * High-performance registry for managing active WebSocket connections.
- * Optimized for O(1) removals via bidirectional tag mapping.
+ * Uses a WeakMap for connection-to-tag mapping to allow automatic 
+ * garbage collection and prevent memory leaks if remove() is missed.
  * 
  * @implements IteratorAggregate<string, ConnectionInterface>
  */
@@ -26,8 +28,17 @@ final class ConnectionRegistry implements ConnectionRegistryInterface, Countable
     /** @var array<string, array<string, bool>> Tag mapping [tag => [connectionId => true]] */
     private array $tags = [];
 
-    /** @var array<string, array<string, bool>> Reverse mapping [connectionId => [tag => true]] */
-    private array $connectionTags = [];
+    /** 
+     * @var WeakMap<ConnectionInterface, array<string, bool>> 
+     * Advanced: Reverse mapping using WeakMap to ensure tag metadata is purged
+     * if the connection object itself is garbage collected.
+     */
+    private WeakMap $connectionTags;
+
+    public function __construct()
+    {
+        $this->connectionTags = new WeakMap();
+    }
 
     /**
      * Number of active connections.
@@ -46,23 +57,28 @@ final class ConnectionRegistry implements ConnectionRegistryInterface, Countable
 
     /**
      * Remove a connection from the registry and clean up tags.
-     * Fixed Complexity DoS vulnerability (uses reverse mapping for O(1) tag cleanup).
      */
     public function remove(string|ConnectionInterface $connection): void
     {
-        $id = $connection instanceof ConnectionInterface ? $connection->getId() : $connection;
-        
+        $connObj = $connection instanceof ConnectionInterface ? $connection : ($this->connections[$connection] ?? null);
+        if (!$connObj) {
+            return;
+        }
+
+        $id = $connObj->getId();
         unset($this->connections[$id]);
 
-        // Optimized cleanup using reverse mapping
-        $tags = $this->connectionTags[$id] ?? [];
+        // Optimized cleanup using the WeakMap metadata
+        $tags = $this->connectionTags[$connObj] ?? [];
         foreach ($tags as $tag => $_) {
             unset($this->tags[$tag][$id]);
             if (empty($this->tags[$tag])) {
                 unset($this->tags[$tag]);
             }
         }
-        unset($this->connectionTags[$id]);
+        
+        // WeakMap entry is automatically eligible for GC, but we can be explicit
+        unset($this->connectionTags[$connObj]);
     }
 
     /**
@@ -78,10 +94,18 @@ final class ConnectionRegistry implements ConnectionRegistryInterface, Countable
      */
     public function tag(string|ConnectionInterface $connection, string $tag): void
     {
-        $id = $connection instanceof ConnectionInterface ? $connection->getId() : $connection;
-        if (isset($this->connections[$id])) {
-            $this->tags[$tag][$id] = true;
-            $this->connectionTags[$id][$tag] = true;
+        $connObj = $connection instanceof ConnectionInterface ? $connection : ($this->connections[$connection] ?? null);
+        if ($connObj) {
+            $this->tags[$tag][$connObj->getId()] = true;
+            
+            if (!isset($this->connectionTags[$connObj])) {
+                $this->connectionTags[$connObj] = [];
+            }
+            // Use array_merge to bypass WeakMap direct modification limitation if needed,
+            // but simple assignment works for nested arrays if handled correctly.
+            $current = $this->connectionTags[$connObj];
+            $current[$tag] = true;
+            $this->connectionTags[$connObj] = $current;
         }
     }
 
@@ -90,8 +114,14 @@ final class ConnectionRegistry implements ConnectionRegistryInterface, Countable
      */
     public function untag(string|ConnectionInterface $connection, string $tag): void
     {
-        $id = $connection instanceof ConnectionInterface ? $connection->getId() : $connection;
-        unset($this->tags[$tag][$id], $this->connectionTags[$id][$tag]);
+        $connObj = $connection instanceof ConnectionInterface ? $connection : ($this->connections[$connection] ?? null);
+        if ($connObj) {
+            unset($this->tags[$tag][$connObj->getId()]);
+            
+            $current = $this->connectionTags[$connObj] ?? [];
+            unset($current[$tag]);
+            $this->connectionTags[$connObj] = $current;
+        }
     }
 
     /**

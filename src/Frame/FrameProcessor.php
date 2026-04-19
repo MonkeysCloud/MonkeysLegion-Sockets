@@ -9,6 +9,8 @@ namespace MonkeysLegion\Sockets\Frame;
  * 
  * Responsible for encoding data into WebSocket frames and decoding
  * raw binary data back into Frame objects. Follows RFC 6455 structure.
+ * 
+ * Includes UTF-8 validation for text frames as per RFC security guidelines.
  */
 final readonly class FrameProcessor
 {
@@ -55,6 +57,8 @@ final readonly class FrameProcessor
 
     /**
      * Decode a raw binary frame into a Frame object.
+     * 
+     * @throws \RuntimeException If UTF-8 validation fails for text frames (Close Code 1007).
      */
     public function decode(string $raw): ?Frame
     {
@@ -94,6 +98,7 @@ final readonly class FrameProcessor
 
         // 5. Handle Masking Key and Payload extraction
         $payload = \substr($raw, $offset, (int) $payloadLength);
+        $maskingKey = null;
 
         if ($isMasked) {
             // Check for potential truncated header for the mask itself
@@ -107,11 +112,14 @@ final readonly class FrameProcessor
             // Re-read payload starting after the 4-byte mask
             $payload = \substr($raw, $offset, (int) $payloadLength);
             $payload = $this->applyMask($payload, $maskingKey);
-            
-            return new Frame($payload, $opcode, $isFinal, $isMasked, $maskingKey);
         }
 
-        return new Frame($payload, $opcode, $isFinal, $isMasked);
+        // 6. RFC 6455 Security: Text frames (0x1) MUST contain valid UTF-8
+        if ($opcode === 0x1 && !\mb_check_encoding($payload, 'UTF-8')) {
+            throw new \RuntimeException('Invalid UTF-8 sequence in text frame', 1007);
+        }
+
+        return new Frame($payload, $opcode, $isFinal, $isMasked, $maskingKey);
     }
 
     /**
@@ -120,15 +128,12 @@ final readonly class FrameProcessor
      */
     private function applyMask(string $data, string $key): string
     {
-        $payload = '';
-        $keyLength = \strlen($key);
-        if ($keyLength === 0) {
+        $len = \strlen($data);
+        if ($len === 0 || \strlen($key) === 0) {
             return $data;
         }
 
-        for ($i = 0; $i < \strlen($data); $i++) {
-            $payload .= $data[$i] ^ $key[$i % 4];
-        }
-        return $payload;
+        // Optimization: Use native string bitwise XOR instead of a loop.
+        return $data ^ \str_repeat($key, (int) \ceil($len / 4));
     }
 }

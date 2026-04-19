@@ -7,16 +7,22 @@ namespace MonkeysLegion\Sockets\Driver;
 use MonkeysLegion\Sockets\Contracts\ConnectionInterface;
 use MonkeysLegion\Sockets\Contracts\MessageInterface;
 use MonkeysLegion\Sockets\Frame\FrameProcessor;
+use RuntimeException;
 
 /**
  * StreamConnection
  * 
  * Represents a client connection over a PHP stream.
  * Handles reading/writing frames via the StreamSocketDriver.
+ * Implements write buffering and backpressure to prevent loop stalls.
  */
 final class StreamConnection implements ConnectionInterface
 {
+    /** @var int Maximum write buffer size (5MB) before killing connection */
+    public const int MAX_WRITE_BUFFER = 5 * 1024 * 1024;
+
     private int $lastActivity;
+    private string $writeBuffer = '';
 
     /**
      * @param resource $resource The raw PHP stream resource.
@@ -43,7 +49,8 @@ final class StreamConnection implements ConnectionInterface
     }
 
     /**
-     * Send a raw string or Message object to the client.
+     * Add data to the write buffer.
+     * Implements backpressure by throwing exception if buffer is too large.
      */
     public function send(string|MessageInterface $message): void
     {
@@ -51,12 +58,46 @@ final class StreamConnection implements ConnectionInterface
             ? $this->frameProcessor->encode($message->getPayload(), $message->getOpcode())
             : $this->frameProcessor->encode($message);
 
-        @\fwrite($this->resource, $data);
+        if (\strlen($this->writeBuffer) + \strlen($data) > self::MAX_WRITE_BUFFER) {
+            throw new RuntimeException("Backpressure limit exceeded for connection {$this->id}");
+        }
+
+        $this->writeBuffer .= $data;
         $this->touch();
     }
 
     /**
-     * Close the connection with an optional status code and reason.
+     * Attempt to flush the write buffer to the socket.
+     * Called by the Driver when the socket becomes writable.
+     */
+    public function flush(): int
+    {
+        if ($this->writeBuffer === '') {
+            return 0;
+        }
+
+        $written = @\fwrite($this->resource, $this->writeBuffer);
+        
+        if ($written === false || $written === 0) {
+            return 0;
+        }
+
+        $this->writeBuffer = \substr($this->writeBuffer, $written);
+        $this->touch();
+        
+        return $written;
+    }
+
+    /**
+     * Check if there is pending data in the write buffer.
+     */
+    public function hasPendingWrites(): bool
+    {
+        return $this->writeBuffer !== '';
+    }
+
+    /**
+     * Close the connection.
      */
     public function close(int $code = 1000, string $reason = ''): void
     {
@@ -70,9 +111,7 @@ final class StreamConnection implements ConnectionInterface
     }
 
     /**
-     * Get associated metadata (headers, query string, etc.).
-     * 
-     * @return array<string, mixed>
+     * Get metadata associated with the connection.
      */
     public function getMetadata(): array
     {
@@ -80,7 +119,7 @@ final class StreamConnection implements ConnectionInterface
     }
 
     /**
-     * Internal: Get the raw stream resource.
+     * Get the raw stream resource.
      * 
      * @return resource
      */
@@ -89,17 +128,11 @@ final class StreamConnection implements ConnectionInterface
         return $this->resource;
     }
 
-    /**
-     * Get the timestamp of the last activity.
-     */
     public function lastActivity(): int
     {
         return $this->lastActivity;
     }
 
-    /**
-     * Update the last activity timestamp.
-     */
     public function touch(): void
     {
         $this->lastActivity = \time();

@@ -34,7 +34,10 @@ final class SocketChaosTest extends TestCase
         $factory = $this->createStub(ResponseFactoryInterface::class);
         $negotiator = new HandshakeNegotiator($factory);
         
-        $driver = new StreamSocketDriver($processor, $negotiator);
+        $driver = new StreamSocketDriver(
+            frameProcessor: $processor,
+            negotiator: $negotiator
+        );
         
         // We'll simulate this by mocking or by using real sockets if possible.
         // Since we are in a limited environment, we'll verify the code logic.

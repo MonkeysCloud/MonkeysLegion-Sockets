@@ -4,3 +4,4 @@
 /.phpunit.cache/
 /.vscode/
 /.idea/
+debug_headers.log

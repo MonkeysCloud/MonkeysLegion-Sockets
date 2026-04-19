@@ -7,7 +7,9 @@ namespace MonkeysLegion\Sockets\Driver;
 use MonkeysLegion\Sockets\Contracts\ConnectionInterface;
 use MonkeysLegion\Sockets\Contracts\DriverInterface;
 use MonkeysLegion\Sockets\Frame\FrameProcessor;
+use MonkeysLegion\Sockets\Frame\MessageAssembler;
 use MonkeysLegion\Sockets\Handshake\HandshakeNegotiator;
+use MonkeysLegion\Sockets\Handshake\RequestParser;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Throwable;
@@ -18,6 +20,8 @@ use Throwable;
  * Native PHP implementation of a WebSocket transport driver using
  * `stream_socket_server`. Handles the multi-connection event loop
  * via `stream_select`.
+ * 
+ * Optimized for high-concurrency with non-blocking write buffering.
  */
 final class StreamSocketDriver implements DriverInterface
 {
@@ -41,6 +45,7 @@ final class StreamSocketDriver implements DriverInterface
 
     public function __construct(
         private readonly FrameProcessor $frameProcessor = new FrameProcessor(),
+        private readonly MessageAssembler $assembler = new MessageAssembler(),
         private readonly ?HandshakeNegotiator $negotiator = null,
         private readonly LoggerInterface $logger = new NullLogger()
     ) {}
@@ -53,7 +58,6 @@ final class StreamSocketDriver implements DriverInterface
         $uri = \sprintf('tcp://%s:%d', $address, $port);
         $ctx = \stream_context_create($context);
 
-        // 1. Create the server socket. This is non-blocking and ready for connections.
         $server = @\stream_socket_server($uri, $errno, $errstr, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, $ctx);
 
         if (!\is_resource($server)) {
@@ -64,11 +68,8 @@ final class StreamSocketDriver implements DriverInterface
         $this->logger->info("WebSocket server listening on {$uri}");
         
         $this->running = true;
-        
-        // 2. Register the server socket in our watch list
         $this->streams[(int) $this->server] = $this->server;
 
-        // 3. Start the infinite event loop
         $this->loop();
     }
 
@@ -92,21 +93,35 @@ final class StreamSocketDriver implements DriverInterface
     private function loop(): void
     {
         while ($this->running) {
-            // We use a copy of the stream list because stream_select modifies it
             $read = $this->streams;
-            $write = $except = null;
+            $write = [];
+            $except = null;
 
-            // Wait until some stream has data or a new connection arrives
+            // 1. Monitor connections with pending data for writability
+            foreach ($this->connections as $id => $connection) {
+                if ($connection->hasPendingWrites()) {
+                    $write[] = $this->streams[$id];
+                }
+            }
+
+            // 2. Perform the non-blocking select
             if (@\stream_select($read, $write, $except, 1) === false) {
                 break;
             }
 
+            // 3. Handle writable sockets (Clear buffers)
+            if ($write) {
+                foreach ($write as $stream) {
+                    $id = (int) $stream;
+                    $this->connections[$id]?->flush();
+                }
+            }
+
+            // 4. Handle readable sockets (Accept or Read data)
             foreach ($read as $stream) {
-                // If the signal is on the server socket, it's a new connection
                 if ($stream === $this->server) {
                     $this->acceptConnection();
                 } else {
-                    // Otherwise, it's data from an existing client
                     $this->handleData($stream);
                 }
             }
@@ -127,14 +142,12 @@ final class StreamSocketDriver implements DriverInterface
             return;
         }
 
-        // Set to non-blocking to prevent fread from hanging the loop
         \stream_set_blocking($socket, false);
         
         $name = \stream_socket_get_name($socket, true);
         $id = \is_string($name) ? $name : (string) (int) $socket;
         $streamId = (int) $socket;
 
-        // Create the internal connection wrapper
         $connection = new StreamConnection($socket, $id, $this->frameProcessor);
         
         $this->streams[$streamId] = $socket;
@@ -158,10 +171,8 @@ final class StreamSocketDriver implements DriverInterface
             return;
         }
 
-        // Read the binary chunk
         $data = @\fread($stream, 8192);
 
-        // Check for disconnect signals (empty data usually means EOF)
         if ($data === '' || $data === false) {
             $this->closeConnection($streamId);
             return;
@@ -170,15 +181,15 @@ final class StreamSocketDriver implements DriverInterface
         $connection->touch();
 
         try {
-            // Phase A: Perform WebSocket Handshake if not already done
             if (!$this->handshaked[$streamId]) {
                 $this->performHandshake($streamId, $data);
-            } 
-            // Phase B: Process standard WebSocket frames
-            else {
+            } else {
                 $frame = $this->frameProcessor->decode($data);
-                if ($frame && isset($this->callbacks['message'])) {
-                    ($this->callbacks['message'])($connection, $frame);
+                if ($frame) {
+                    $assembled = $this->assembler->assemble($streamId, $frame);
+                    if ($assembled && isset($this->callbacks['message'])) {
+                        ($this->callbacks['message'])($connection, $assembled);
+                    }
                 }
             }
         } catch (Throwable $e) {
@@ -195,13 +206,37 @@ final class StreamSocketDriver implements DriverInterface
      */
     private function performHandshake(int $streamId, string $data): void
     {
-        // Mark as handshaked. 
-        // Note: Real PSR-7 request parsing would happen here if using the Negotiator.
-        $this->handshaked[$streamId] = true;
-        
-        $connection = $this->connections[$streamId] ?? null;
-        if ($connection && isset($this->callbacks['open'])) {
-            ($this->callbacks['open'])($connection);
+        try {
+            if ($this->negotiator) {
+                $request = RequestParser::parse($data);
+                $response = $this->negotiator->negotiate($request);
+                
+                $header = \sprintf(
+                    "HTTP/%s %d %s\r\n",
+                    $response->getProtocolVersion(),
+                    $response->getStatusCode(),
+                    $response->getReasonPhrase()
+                );
+
+                foreach ($response->getHeaders() as $name => $values) {
+                    $header .= \sprintf("%s: %s\r\n", $name, \implode(', ', $values));
+                }
+                $header .= "\r\n";
+
+                @\fwrite($this->streams[$streamId], $header);
+            }
+
+            $this->handshaked[$streamId] = true;
+            
+            $connection = $this->connections[$streamId] ?? null;
+            if ($connection && isset($this->callbacks['open'])) {
+                ($this->callbacks['open'])($connection);
+            }
+        } catch (Throwable $e) {
+            $this->logger->error("Handshake failed: " . $e->getMessage());
+            $errorResponse = "HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n";
+            @\fwrite($this->streams[$streamId], $errorResponse);
+            $this->closeConnection($streamId);
         }
     }
 
