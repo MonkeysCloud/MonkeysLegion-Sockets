@@ -43,6 +43,21 @@ class UnixBroadcaster implements BroadcasterInterface
         return $this;
     }
 
+    public function channel(string $pattern, array $parameters): self
+    {
+        $resolved = $pattern;
+
+        foreach ($parameters as $key => $value) {
+            $resolved = \str_replace('{' . $key . '}', (string) $value, $resolved);
+        }
+
+        if (\preg_match('/\{[a-zA-Z0-9_]+\}/', $resolved)) {
+            throw new RuntimeException("Broadcaster pattern binding failed. Some placeholders in [$pattern] were not provided in parameters.");
+        }
+
+        return $this->to($resolved);
+    }
+
     public function emit(string $event, mixed $data = []): void
     {
         $this->publish($event, $data);
@@ -90,9 +105,6 @@ class UnixBroadcaster implements BroadcasterInterface
             throw new RuntimeException("Could not connect to WebSocket IPC socket: {$this->socketPath}");
         }
 
-        // We append a delimiter or just write the payload. 
-        // For Unix sockets, a simple write followed by close often works if the server reads until EOF.
-        // However, we'll use a newline delimiter for stream safety in long-lived connections.
         @\fwrite($socket, $payload . "\n");
         @\fclose($socket);
     }

@@ -20,6 +20,11 @@ interface ConnectionInterface
     public function send(string|MessageInterface $message): void;
 
     /**
+     * Send a WebSocket Ping frame to the client.
+     */
+    public function ping(string $payload = ''): void;
+
+    /**
      * Close the connection.
      */
     public function close(int $code = 1000, string $reason = ''): void;

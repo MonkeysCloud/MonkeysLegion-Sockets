@@ -37,13 +37,20 @@ class SwooleConnection implements ConnectionInterface
     public function send(string|MessageInterface $message): void
     {
         $payload = $message instanceof MessageInterface ? $message->getPayload() : $message;
+        $opcode = $message instanceof MessageInterface ? $message->getOpcode() : 0x1;
         
         // Swoole handles masking and framing automatically
         if ($this->server->isEstablished($this->fd)) {
-            $this->server->push($this->fd, $payload);
+            $this->server->push($this->fd, $payload, $opcode);
         }
-        
-        $this->touch();
+    }
+
+    public function ping(string $payload = ''): void
+    {
+        if ($this->server->isEstablished($this->fd)) {
+            // Opcode 0x9 is PING
+            $this->server->push($this->fd, $payload, 0x09);
+        }
     }
 
     public function close(int $code = 1000, string $reason = ''): void

@@ -28,6 +28,12 @@ interface BroadcasterInterface
     public function toConnection(string $connectionId): self;
 
     /**
+     * Target a dynamic channel/tag using pattern binding.
+     * Example: channel('User.{id}', ['id' => 1]) targets 'User.1'
+     */
+    public function channel(string $pattern, array $parameters): self;
+
+    /**
      * Emit the message with optional envelope metadata.
      */
     public function emit(string $event, mixed $data = []): void;

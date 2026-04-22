@@ -7,24 +7,43 @@ namespace MonkeysLegion\Sockets\Tests\Integration\Security;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use MonkeysLegion\Sockets\Driver\StreamSocketDriver;
+use MonkeysLegion\Sockets\Frame\FrameProcessor;
+use MonkeysLegion\Sockets\Frame\MessageAssembler;
+use MonkeysLegion\Sockets\Handshake\HandshakeNegotiator;
+use MonkeysLegion\Sockets\Handshake\ResponseFactory;
 use MonkeysLegion\Sockets\Contracts\ConnectionInterface;
+use Psr\Log\NullLogger;
 
-/**
- * SlowLorisTest
- * 
- * Verifies that the server handles slow clients gracefully using 
- * Write Buffering and Backpressure, avoiding loop stalls and memory exhaustion.
- */
 final class SlowLorisTest extends TestCase
 {
+    /**
+     * Verifies that the server remains responsive and can accept new 
+     * connections even after having to prune a malicious client.
+     */
     #[Test]
-    public function it_enforces_backpressure_and_prevents_loop_stalls(): void
+    public function it_remains_responsive_after_dropping_adversarial_client(): void
     {
-        $port = 9002;
-        $driver = new StreamSocketDriver();
-        $largeData = \str_repeat('X', 6 * 1024 * 1024); // 6MB (Exceeds 5MB limit)
+        $port = 9102;
+        
+        $driver = new StreamSocketDriver(
+            frameProcessor: new FrameProcessor(),
+            assembler: new MessageAssembler(),
+            negotiator: new HandshakeNegotiator(new ResponseFactory()),
+            logger: new NullLogger(),
+            writeBufferSize: 1024 // Tiny 1KB buffer
+        );
 
-        // Start server in background
+        // Hook to punish overloaded clients
+        $driver->onOpen(function (ConnectionInterface $conn) {
+            if ($conn->getId() === 'malicious') {
+                try {
+                    $conn->send(\str_repeat('X', 2048));
+                } catch (\RuntimeException $e) {
+                    $conn->close();
+                }
+            }
+        });
+
         $pid = \pcntl_fork();
         if ($pid === 0) {
             try {
@@ -35,35 +54,42 @@ final class SlowLorisTest extends TestCase
             exit(0);
         }
 
-        // Wait for server to boot
+        // Wait for boot
         \usleep(100000);
 
-        // Client: Connect but don't read (causing buffer to fill)
-        $client = \stream_socket_client("tcp://127.0.0.1:$port");
-        \stream_set_blocking($client, false);
+        try {
+            // 1. Malicious Client connects
+            $clientA = @\stream_socket_client("tcp://127.0.0.1:$port");
+            $this->assertIsResource($clientA);
+            
+            // Handshake as 'malicious' ID (simulation)
+            $handshake = "GET / HTTP/1.1\r\n" .
+                         "Host: 127.0.0.1\r\n" .
+                         "Upgrade: websocket\r\n" .
+                         "Connection: Upgrade\r\n" .
+                         "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" .
+                         "Sec-WebSocket-Version: 13\r\n\r\n";
+            \fwrite($clientA, $handshake);
+            
+            \usleep(200000);
 
-        // Wait for server to accept
-        \usleep(50000);
+            // 2. Healthy Client connects immediately after
+            $clientB = @\stream_socket_client("tcp://127.0.0.1:$port");
+            $this->assertIsResource($clientB);
+            
+            \fwrite($clientB, $handshake);
+            \usleep(200000);
+            
+            $responseB = \fread($clientB, 1024);
+            
+            // 3. Verify Server is still alive and responsive
+            $this->assertStringContainsString('101 Switching Protocols', $responseB, "Server should remain responsive to healthy clients after dropping an adversarial one.");
 
-        // We need the server to try to send data. 
-        // Since we don't have an easy way to trigger it from here without a real app,
-        // we'll simulate the Driver's internal connection handling.
-        
-        // Actually, let's use the Driver's callback to trigger the send.
-        $driver->onOpen(function (ConnectionInterface $conn) use ($largeData) {
-            try {
-                // This should trigger the Backpressure RuntimeException
-                $conn->send($largeData);
-            } catch (\RuntimeException $e) {
-                // Success: Backpressure caught the overflow
-                $conn->close();
-            }
-        });
-
-        // Shutdown background process
-        \posix_kill($pid, SIGKILL);
-        \pcntl_wait($status);
-
-        $this->assertTrue(true, "Slow Loris test executed without stalling the main loop.");
+        } finally {
+            if (isset($clientA) && \is_resource($clientA)) @\fclose($clientA);
+            if (isset($clientB) && \is_resource($clientB)) @\fclose($clientB);
+            \posix_kill($pid, SIGKILL);
+            \pcntl_wait($status);
+        }
     }
 }

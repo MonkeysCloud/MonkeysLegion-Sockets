@@ -45,6 +45,22 @@ class RedisBroadcaster implements BroadcasterInterface
         return $this;
     }
 
+    public function channel(string $pattern, array $parameters): self
+    {
+        $resolved = $pattern;
+
+        foreach ($parameters as $key => $value) {
+            $resolved = \str_replace('{' . $key . '}', (string) $value, $resolved);
+        }
+
+        // Check if any placeholders remain unreplaced
+        if (\preg_match('/\{[a-zA-Z0-9_]+\}/', $resolved)) {
+            throw new RuntimeException("Broadcaster pattern binding failed. Some placeholders in [$pattern] were not provided in parameters.");
+        }
+
+        return $this->to($resolved);
+    }
+
     public function emit(string $event, mixed $data = []): void
     {
         $this->publish($event, $data);

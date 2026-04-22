@@ -28,18 +28,33 @@ final class SwooleDriver implements DriverInterface
     /** @var array<string, callable(mixed...): void> Callbacks */
     private array $callbacks = [];
 
+    /** @var \MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface|null */
+    private ?\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry = null;
+
     public function __construct(
-        private readonly LoggerInterface $logger = new NullLogger()
+        private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly int $writeBufferSize = 5242880,
+        private readonly int $heartbeatInterval = 60,
+        private readonly int $maxMessageSize = 10485760
     ) {}
+
+    public function setRegistry(\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry): void
+    {
+        $this->registry = $registry;
+    }
 
     public function listen(string $address, int $port): void
     {
         $this->server = new Server($address, $port);
 
-        // Configure Swoole for maximum throughput
+        // Configure Swoole using library-standardized options
         $this->server->set([
             'open_websocket_close_frame' => true,
-            'websocket_compression' => true,
+            'websocket_compression'      => true,
+            'package_max_length'         => $this->maxMessageSize,
+            'socket_buffer_size'         => $this->writeBufferSize,
+            'heartbeat_check_interval'   => (int) \ceil($this->heartbeatInterval / 2),
+            'heartbeat_idle_time'        => $this->heartbeatInterval,
         ]);
 
         $this->server->on('open', function (Server $server, $request) {
@@ -51,6 +66,10 @@ final class SwooleDriver implements DriverInterface
             ]);
 
             $this->connections[$fd] = $connection;
+
+            if ($this->registry) {
+                $this->registry->add($connection);
+            }
 
             if (isset($this->callbacks['open'])) {
                 ($this->callbacks['open'])($connection);
@@ -71,6 +90,9 @@ final class SwooleDriver implements DriverInterface
         $this->server->on('close', function (Server $server, int $fd) {
             $connection = $this->connections[$fd] ?? null;
             if ($connection) {
+                if ($this->registry) {
+                    $this->registry->remove($connection);
+                }
                 if (isset($this->callbacks['close'])) {
                     ($this->callbacks['close'])($connection);
                 }

@@ -121,4 +121,27 @@ final class RedisBroadcasterTest extends TestCase
 
         $this->broadcaster->broadcast('legacy');
     }
+
+    #[Test]
+    public function it_resolves_dynamic_patterns_and_bindings(): void
+    {
+        $this->redis->expects($this->once())
+            ->method('publish')
+            ->with($this->anything(), $this->callback(function ($json) {
+                $data = \json_decode($json, true);
+                return $data['type'] === 'tag' && $data['target'] === 'User.123';
+            }));
+
+        $this->broadcaster->channel('User.{id}', ['id' => 123])->emit('alert');
+    }
+
+    #[Test]
+    #[\PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations]
+    public function it_throws_exception_if_pattern_placeholders_are_missing_in_parameters(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Broadcaster pattern binding failed');
+
+        $this->broadcaster->channel('User.{id}.Device.{device}', ['id' => 1])->emit('test');
+    }
 }

@@ -1,19 +1,32 @@
 {
     "name": "monkeyscloud/monkeyslegion-sockets",
+    "description": "High-performance, secure, and cluster-ready WebSocket architecture for the MonkeysLegion ecosystem. Features active liveness monitoring, distributed state management, and multi-driver support (Native, ReactPHP, Swoole).",
     "type": "library",
     "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "MonkeysLegion\\Sockets\\": "src/",
-            "MonkeysLegion\\Sockets\\Tests\\": "tests/"
-        }
-    },
+    "keywords": [
+        "php",
+        "sockets",
+        "websockets",
+        "real-time",
+        "clustering",
+        "broadcast",
+        "swoole",
+        "reactphp",
+        "monkeyslegion",
+        "monkeyscloud"
+    ],
     "authors": [
         {
             "name": "Amanar Marouane",
             "email": "marouane.amanar07@gmail.com"
         }
     ],
+    "autoload": {
+        "psr-4": {
+            "MonkeysLegion\\Sockets\\": "src/",
+            "MonkeysLegion\\Sockets\\Tests\\": "tests/"
+        }
+    },
     "minimum-stability": "dev",
     "require": {
         "php": ">=8.4",
@@ -23,20 +36,42 @@
         "psr/http-factory": "^1.1",
         "psr/container": "^2.0@dev",
         "psr/log": "^3.0@dev",
-        "react/socket": "^1.16"
+        "react/socket": "^1.16",
+        "rybakit/msgpack": "dev-master",
+        "monkeyscloud/monkeyslegion-cli": "^2.0",
+        "monkeyscloud/monkeyslegion-mlc": "^3.0",
+        "monkeyscloud/monkeyslegion-di": "^2.0"
+    },
+    "extra": {
+        "monkeyslegion": {
+            "providers": [
+                "MonkeysLegion\\Sockets\\Providers\\SocketServiceProvider"
+            ]
+        }
     },
     "suggest": {
-        "ext-swoole": "Provides high-performance multi-threaded WebSocket transport (>= 6.0 recommended)",
-        "ext-redis": "Required for the distributed RedisConnectionRegistry"
+        "ext-swoole": "Provides high-performance multi-threaded WebSocket transport for production scale.",
+        "ext-redis": "Required for distributed RedisConnectionRegistry and RedisBroadcaster strategies.",
+        "ext-pcntl": "Required for graceful signal handling (SIGINT/SIGTERM) in the CLI server.",
+        "ext-posix": "Required for process management during integration testing."
     },
     "require-dev": {
         "phpstan/phpstan": "2.2.x-dev",
         "phpunit/phpunit": "^13.2@dev"
     },
     "scripts": {
-        "ci": "composer test && composer analyze && composer format",
-        "test": "vendor/bin/phpunit",
+        "ci": [
+            "@test",
+            "@analyze"
+        ],
+        "test": "vendor/bin/phpunit --display-all-issues",
         "analyze": "vendor/bin/phpstan analyse --level=9 src",
-        "format": "phpcs --standard=PSR12 src tests"
+        "format": "vendor/bin/php-cs-fixer fix src"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
     }
 }

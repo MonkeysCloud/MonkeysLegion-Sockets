@@ -85,4 +85,21 @@ final class UnixBroadcasterTest extends TestCase
         \fclose($conn);
         \fclose($server);
     }
+
+    #[Test]
+    public function it_resolves_dynamic_patterns(): void
+    {
+        $server = \stream_socket_server('unix://' . $this->socketPath);
+        $broadcaster = new UnixBroadcaster($this->socketPath);
+
+        $broadcaster->channel('Room.{id}', ['id' => 456])->emit('alert');
+        $conn = \stream_socket_accept($server);
+        $payload = \json_decode(\trim(\fgets($conn)), true);
+        
+        $this->assertEquals('tag', $payload['type']);
+        $this->assertEquals('Room.456', $payload['target']);
+        
+        \fclose($conn);
+        \fclose($server);
+    }
 }

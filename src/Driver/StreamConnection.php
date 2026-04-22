@@ -18,20 +18,19 @@ use RuntimeException;
  */
 final class StreamConnection implements ConnectionInterface
 {
-    /** @var int Maximum write buffer size (5MB) before killing connection */
-    public const int MAX_WRITE_BUFFER = 5 * 1024 * 1024;
-
     private int $lastActivity;
     private string $writeBuffer = '';
 
     /**
      * @param resource $resource The raw PHP stream resource.
+     * @param int $maxWriteBuffer Maximum buffer size in bytes before backpressure.
      * @param array<string, mixed> $metadata
      */
     public function __construct(
         private readonly mixed $resource,
         private readonly string $id,
         private readonly FrameProcessor $frameProcessor,
+        private readonly int $maxWriteBuffer = 5242880, // Default 5MB
         private readonly array $metadata = []
     ) {
         if (!\is_resource($this->resource)) {
@@ -58,12 +57,22 @@ final class StreamConnection implements ConnectionInterface
             ? $this->frameProcessor->encode($message->getPayload(), $message->getOpcode())
             : $this->frameProcessor->encode($message);
 
-        if (\strlen($this->writeBuffer) + \strlen($data) > self::MAX_WRITE_BUFFER) {
-            throw new RuntimeException("Backpressure limit exceeded for connection {$this->id}");
+        if (\strlen($this->writeBuffer) + \strlen($data) > $this->maxWriteBuffer) {
+            throw new RuntimeException("Backpressure limit exceeded for connection {$this->id} ({$this->maxWriteBuffer} bytes reached)");
         }
 
         $this->writeBuffer .= $data;
-        $this->touch();
+    }
+
+    /**
+     * Send a WebSocket Ping frame.
+     */
+    public function ping(string $payload = ''): void
+    {
+        $data = $this->frameProcessor->encode($payload, 0x9);
+        $this->writeBuffer .= $data;
+        // We don't touch here because Ping isn't client activity.
+        // Activity is only touched when We RECEIVE something (like a Pong).
     }
 
     /**
@@ -83,7 +92,6 @@ final class StreamConnection implements ConnectionInterface
         }
 
         $this->writeBuffer = \substr($this->writeBuffer, $written);
-        $this->touch();
         
         return $written;
     }

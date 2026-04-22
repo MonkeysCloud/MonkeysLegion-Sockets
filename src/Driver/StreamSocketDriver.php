@@ -47,12 +47,27 @@ final class StreamSocketDriver implements DriverInterface
     /** @var array<int, string> Input buffers */
     private array $buffers = [];
 
+    /** @var int Timestamp of the last heartbeat cycle */
+    private int $lastHeartbeatCycle = 0;
+
+    /** @var \MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface|null */
+    private ?\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry = null;
+
     public function __construct(
         private readonly FrameProcessor $frameProcessor = new FrameProcessor(),
         private readonly MessageAssembler $assembler = new MessageAssembler(),
         private readonly HandshakeNegotiator $negotiator = new HandshakeNegotiator(new ResponseFactory()),
-        private readonly LoggerInterface $logger = new NullLogger()
-    ) {}
+        private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly int $writeBufferSize = 5242880, // Default 5MB
+        private readonly int $heartbeatInterval = 60      // Default 60 seconds
+    ) {
+        $this->lastHeartbeatCycle = \time();
+    }
+
+    public function setRegistry(\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry): void
+    {
+        $this->registry = $registry;
+    }
 
     /**
      * Start the socket server and enter the event loop.
@@ -78,14 +93,23 @@ final class StreamSocketDriver implements DriverInterface
     }
 
     /**
-     * Stop the loop and close all connections.
+     * Stop the loop and close all connections gracefully.
      */
     public function stop(): void
     {
         $this->running = false;
-        foreach ($this->connections as $connection) {
-            $connection->close();
+        
+        $this->logger->info("Shutting down WebSocket server gracefully...");
+        
+        // Send 1001 Going Away to all clients
+        foreach ($this->connections as $id => $connection) {
+            try {
+                $connection->close(1001, 'Server shutting down');
+            } catch (Throwable) {
+                // Ignore errors during mass close
+            }
         }
+
         if (\is_resource($this->server)) {
             @\fclose($this->server);
         }
@@ -113,7 +137,10 @@ final class StreamSocketDriver implements DriverInterface
                 break;
             }
 
-            // 3. Handle writable sockets (Clear buffers)
+            // 3. Periodic Heartbeat System
+            $this->processHeartbeats();
+
+            // 4. Handle writable sockets (Clear buffers)
             if ($write) {
                 foreach ($write as $stream) {
                     $id = (int) $stream;
@@ -121,7 +148,7 @@ final class StreamSocketDriver implements DriverInterface
                 }
             }
 
-            // 4. Handle readable sockets (Accept or Read data)
+            // 5. Handle readable sockets (Accept or Read data)
             foreach ($read as $stream) {
                 if ($stream === $this->server) {
                     $this->acceptConnection();
@@ -130,6 +157,37 @@ final class StreamSocketDriver implements DriverInterface
                 }
             }
         }
+    }
+
+    /**
+     * Active heartbeat system: sends Pings and reaps non-responding clients.
+     */
+    private function processHeartbeats(): void
+    {
+        $now = \time();
+        
+        // We run the cycle check every heartbeatInterval
+        if ($now - $this->lastHeartbeatCycle < $this->heartbeatInterval) {
+            return;
+        }
+
+        foreach ($this->connections as $id => $connection) {
+            $idleTime = $now - $connection->lastActivity();
+
+            // If idle for more than the limit, reap
+            if ($idleTime >= ($this->heartbeatInterval * 2)) {
+                $this->logger->info("Reaping zombie connection {$connection->getId()} (No Pong received)");
+                $this->closeConnection($id);
+                continue;
+            }
+
+            // If idle for more than one interval, send a proactive Ping
+            if ($this->handshaked[$id]) {
+                $connection->ping();
+            }
+        }
+
+        $this->lastHeartbeatCycle = $now;
     }
 
     /**
@@ -152,7 +210,12 @@ final class StreamSocketDriver implements DriverInterface
         $id = \is_string($name) ? $name : (string) (int) $socket;
         $streamId = (int) $socket;
 
-        $connection = new StreamConnection($socket, $id, $this->frameProcessor);
+        $connection = new StreamConnection(
+            resource: $socket, 
+            id: $id, 
+            frameProcessor: $this->frameProcessor,
+            maxWriteBuffer: $this->writeBufferSize
+        );
         
         $this->streams[$streamId] = $socket;
         $this->connections[$streamId] = $connection;
@@ -185,8 +248,6 @@ final class StreamSocketDriver implements DriverInterface
         $this->buffers[$streamId] ??= '';
         $this->buffers[$streamId] .= $data;
 
-        $connection->touch();
-
         try {
             if (!$this->handshaked[$streamId]) {
                 $this->performHandshake($streamId, $data);
@@ -197,12 +258,37 @@ final class StreamSocketDriver implements DriverInterface
                         break;
                     }
 
-                    // Slice exactly what was consumed
+                    // Reset activity timer only on MEANINGFUL frames.
+                    // We ignore Opcode 0 (Continuation) because it's used in 
+                    // 'Infinite Idle' bypass attacks.
+                    if ($frame->getOpcode() !== 0x0) {
+                        $connection->touch();
+                    }
+
                     $this->buffers[$streamId] = \substr($this->buffers[$streamId], $frame->getConsumedLength());
 
-                    $assembled = $this->assembler->assemble($streamId, $frame);
-                    if ($assembled && isset($this->callbacks['message'])) {
-                        ($this->callbacks['message'])($connection, $assembled);
+                    // Handle WebSocket Protocol Opcodes
+                    switch ($frame->getOpcode()) {
+                        case 0x8: // Close
+                            $this->closeConnection($streamId);
+                            return;
+                        
+                        case 0x9: // Ping -> Respond with Pong
+                            $pong = $this->frameProcessor->encode($frame->getPayload(), 0xA);
+                            @\fwrite($stream, $pong);
+                            break;
+
+                        case 0xA: // Pong -> Activity already touched above
+                            break;
+
+                        case 0x0: // Continuation
+                        case 0x1: // Text
+                        case 0x2: // Binary
+                            $assembled = $this->assembler->assemble($streamId, $frame);
+                            if ($assembled && isset($this->callbacks['message'])) {
+                                ($this->callbacks['message'])($connection, $assembled);
+                            }
+                            break;
                     }
                 }
             }
@@ -243,13 +329,24 @@ final class StreamSocketDriver implements DriverInterface
             $this->handshaked[$streamId] = true;
             
             $connection = $this->connections[$streamId] ?? null;
-            if ($connection && isset($this->callbacks['open'])) {
-                ($this->callbacks['open'])($connection);
+            if ($connection) {
+                $connection->touch();
+                if ($this->registry) {
+                    $this->registry->add($connection);
+                }
+                if (isset($this->callbacks['open'])) {
+                    ($this->callbacks['open'])($connection);
+                }
             }
         } catch (Throwable $e) {
-            $this->logger->error("Handshake failed: " . $e->getMessage());
-            $errorResponse = "HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n";
-            @\fwrite($this->streams[$streamId], $errorResponse);
+            $this->logger->error("Handshake/Upgrade failed: " . $e->getMessage());
+            
+            // Only send 400 if we haven't already switched protocols
+            if (!($this->handshaked[$streamId] ?? false)) {
+                $errorResponse = "HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n";
+                @\fwrite($this->streams[$streamId], $errorResponse);
+            }
+            
             $this->closeConnection($streamId);
         }
     }
@@ -260,12 +357,17 @@ final class StreamSocketDriver implements DriverInterface
     private function closeConnection(int $streamId): void
     {
         $connection = $this->connections[$streamId] ?? null;
-        if ($connection && isset($this->callbacks['close'])) {
-            ($this->callbacks['close'])($connection);
+        if ($connection) {
+            if ($this->registry) {
+                $this->registry->remove($connection);
+            }
+            if (isset($this->callbacks['close'])) {
+                ($this->callbacks['close'])($connection);
+            }
         }
 
         $stream = $this->streams[$streamId] ?? null;
-        unset($this->streams[$streamId], $this->connections[$streamId], $this->handshaked[$streamId]);
+        unset($this->streams[$streamId], $this->connections[$streamId], $this->handshaked[$streamId], $this->buffers[$streamId]);
         
         if (\is_resource($stream)) {
             @\fclose($stream);
@@ -290,5 +392,15 @@ final class StreamSocketDriver implements DriverInterface
     public function onError(callable $callback): void
     {
         $this->callbacks['error'] = $callback;
+    }
+
+    public function getHeartbeatInterval(): int
+    {
+        return $this->heartbeatInterval;
+    }
+
+    public function getWriteBufferSize(): int
+    {
+        return $this->writeBufferSize;
     }
 }

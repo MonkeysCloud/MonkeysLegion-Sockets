@@ -19,7 +19,7 @@ final class ResponseFactory implements ResponseFactoryInterface
 {
     public function createResponse(int $code = 200, string $reasonPhrase = ''): ResponseInterface
     {
-        return new MinimalResponse($code);
+        return new MinimalResponse($code, $reasonPhrase);
     }
 }
 
@@ -32,15 +32,35 @@ final class ResponseFactory implements ResponseFactoryInterface
  */
 final class MinimalResponse implements ResponseInterface
 {
+    private const array REASONS = [
+        101 => 'Switching Protocols',
+        200 => 'OK',
+        400 => 'Bad Request',
+        403 => 'Forbidden',
+        404 => 'Not Found',
+        500 => 'Internal Server Error',
+        503 => 'Service Unavailable',
+    ];
+
     private array $headers = [];
 
-    public function __construct(private readonly int $statusCode) {}
+    public function __construct(
+        private readonly int $statusCode,
+        private string $reasonPhrase = ''
+    ) {
+        if ($this->reasonPhrase === '' && isset(self::REASONS[$this->statusCode])) {
+            $this->reasonPhrase = self::REASONS[$this->statusCode];
+        }
+    }
 
     public function getStatusCode(): int { return $this->statusCode; }
 
-    public function withStatus(int $code, string $reasonPhrase = ''): self { return $this; }
+    public function withStatus(int $code, string $reasonPhrase = ''): self 
+    { 
+        return new self($code, $reasonPhrase); 
+    }
 
-    public function getReasonPhrase(): string { return ''; }
+    public function getReasonPhrase(): string { return $this->reasonPhrase; }
 
     public function getProtocolVersion(): string { return '1.1'; }
 

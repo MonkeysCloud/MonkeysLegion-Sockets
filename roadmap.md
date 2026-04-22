@@ -1,86 +1,48 @@
-# Roadmap: Native PHP WebSocket Integration
+# 🐒 MonkeysLegion Sockets: Roadmap
 
-A high-performance, low-coupled, PSR-compliant WebSocket library for the modern PHP ecosystem.
+Development path for the MonkeysLegion WebSocket ecosystem.
 
-## 🎯 Vision
+## ✅ Phase 1-4: Infrastructure & Hardening (Completed)
+- **Multi-Driver Transport**: Native Stream, ReactPHP, and Swoole drivers implemented.
+- **Security**: Heartbeat reaping (Strict Liveness), CSWH protection, and Backpressure limits.
+- **Broadcasting**: Redis Pub/Sub and Unix Socket strategies with pattern binding (`User.{id}`).
+- **DI Integration**: Fully configurable via `sockets.mlc`.
 
-To provide a "ready-to-go" WebSocket solution that feels native to PHP developers. The goal is to separate the **Transport Layer** (how bytes are moved) from the **Application Layer** (broadcasting logic), allowing for easy integration into existing Full-stack or Backend projects.
+## 🚀 Phase 5: JavaScript Client (Upcoming)
 
----
+A specialized, zero-dependency client designed for speed and reliability.
 
-## 🏗️ Technical Foundation
+### 📍 Distribution Strategy
+- **Location**: `client/monkeys-sockets.js` (Standalone vanilla file).
+- **Format**: UMD (Universal Module Definition). Works via `<script>` tags (Global), ES Modules (`import`), and CommonJS (`require`).
+- **NPM Package**: `monkeyscloud/monkeyslegion-sockets-js` (Future sync).
+- **No-Build Ready**: Usable directly in any browser without Webpack, Vite, or Babel.
 
-- **PSR Compliance:** - `PSR-7` & `PSR-17` for HTTP Handshakes (interoperability with frameworks).
-  - `PSR-11` for Container injection (Dependency Injection).
-  - `PSR-3` for logging.
-- **Low Coupling:** Core components communicate via Interfaces; no hard dependency on specific server extensions.
-- **Concurrency Support:** Support for multiple event loops (Stream Select, Swoole, Libuv).
+### 🛠️ Core Features
+1. **Adaptive Reconnection**
+   - Exponential backoff with random jitter.
+   - Intelligent reconnect logic (starts slow, speeds up on partial success).
+2. **State Preservation & Recovery**
+   - Automatically re-joins rooms and re-binds channel listeners after a connection drop.
+   - Buffers `emit()` calls while offline (Offline Queue) and flushes them upon restoration.
+3. **Heartbeat Watchdog**
+   - Client-side monitor for server Pings.
+   - Triggers proactive reconnection if the server "goes silent" (Network/Proxy check).
+4. **Fluent API**
+   ```javascript
+   const socket = new MonkeysSocket('ws://localhost:9000');
+   socket.on('chat:message', (data) => { ... });
+   socket.emit('chat:send', { msg: 'Hello' });
+   ```
 
----
+## 📦 Phase 6: Framework Integrations
+- Automated client injection middleware.
+- Dashboard for monitoring active connections and message throughput.
 
-## 🗺️ Development Phases
-
-### Phase 1: The Core Infrastructure (The Foundation) ✅
-
-- [x] **Interface Definition:** Create `DriverInterface`, `ConnectionInterface`, and `MessageInterface`.
-- [x] **Handshake Engine:** Implement a PSR-7 compliant negotiator to upgrade HTTP connections to WebSockets (RFC 6455).
-- [x] **Native Driver:** Implement the `StreamSocketDriver` using native PHP `stream_socket_server`.
-- [x] **Frame Handling:** Robust encoding/decoding of WebSocket frames (Masking, OpCodes, Fragmentation, and Binary payload support).
-- [x] **SSL/TLS Support:** Native encryption support for Stream Sockets via SSL contexts.
-
-### Phase 2: High-Performance Drivers & Scaling ✅
-
-- [x] **Connection Management:** Efficiently store and retrieve active connections (Registry pattern).
-- [x] **Heartbeat System:** Built-in Ping/Pong management to prune "ghost" clients.
-- [x] **Authentication Middleware:** Secure handshake validation (JWT/Session).
-- [x] **Write Buffering & Backpressure:** Non-blocking write queues to prevent slow clients from stalling the event loop.
-- [x] **Fragmentation Support:** Transparent message reassembly for multi-frame payloads.
-- [x] **Distributed Scaling:** Redis-backed registry for multi-node room membership.
-- [x] **Security Audit:** Hardened against Slow-Loris, OOM, and UTF-8 injection.
-- [x] **Swoole Driver:** Optional driver for extreme high-concurrency environments.
-- [x] **ReactPHP/Amp Driver:** Integration for users already within an async ecosystem.
-
-### Phase 3: The Integration Layer (The "Bridge")
-
-- [x] **Broadcaster Component:** A mechanism to allow standard PHP-FPM requests to trigger broadcasts.
-
-- [x] **Redis Pub/Sub Adapter:** The primary bridge for horizontal scaling.
-- [x] **Internal IPC:** Unix Socket or Shared Memory bridge for single-server setups. (Verified ✅)
-- [x] **Authentication Handlers:** Defined `AuthenticatorInterface` for JWT and Session-based handshakes.
-- [x] **Middleware Support:** Allow custom logic (Rate Limiting, IP Filtering) during the handshake.
-
-### Phase 4: Message Protocol & UX
-
-- [ ] **Payload Formatters:** Default JSON formatter with support for custom implementations (Protobuf, MessagePack).
-
-- [ ] **Channel/Room Logic:** Support for `join()`, `leave()`, and `to('room_name')->emit()`.
-- [ ] **CLI Tooling:** A `bin/ml-ws` command to manage the server lifecycle (Start, Stop, Status).
-- [ ] **Client-side JS:** A lightweight, zero-dependency JavaScript wrapper to handle auto-reconnects.
-
-### Phase 5: The Frontend (JS Client)
-
-- [ ] **Connection Lifecycle:** Implementation of `onOpen`, `onClose`, `onError`, and `onMessage` hooks.
-
-- [ ] **Smart Reconnect:** Heartbeat-based health checks and exponential backoff reconnection logic.
-- [ ] **Event Emitter Pattern:** A clean `.on('event', callback)` API to handle structured server messages.
-- [ ] **Channel Subscription:** Logic to filter incoming messages based on "topics" or "channels."
-- [ ] **Browser Compatibility:** ESM and UMD builds to support modern build tools (Vite/Webpack) and direct `<script>` tags.
+## 🏗️ Developer Notes
+- **Standards**: Strictly follows [MonkeysLegion v2 Code Standards](CODE_STANDARDS.md).
+- **Environment**: Requires `pcntl` and `posix` for integration testing.
+- **Testing**: PHPUnit 13.2+ with target 80%+ coverage and PHPStan Level 9.
 
 ---
-
-## 🛠️ Proposed Architecture
-
-```text
-[ Web App / FPM ] -> [ Redis / Bridge ] -> [ WebSocket Server ]
-                                                   |
-                                           [ Driver Interface ]
-                                           /        |         \
-                             [Native Stream]    [Swoole]    [ReactPHP]
-
-```
-
-## 📋 PSR Implementation Details
-
-- Log: All internal events (connection errors, frame drops) will use Psr\Log\LoggerInterface.
-
-- DI: The server should be bootable via a Psr\Container\ContainerInterface to allow easy framework integration (Laravel, Symfony, MonkeysLegion).
+*Last Updated: 2026-04-22*

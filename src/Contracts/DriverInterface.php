@@ -20,6 +20,11 @@ interface DriverInterface
     public function stop(): void;
 
     /**
+     * Set the connection registry for this driver.
+     */
+    public function setRegistry(ConnectionRegistryInterface $registry): void;
+
+    /**
      * Register a callback for when a new connection is opened.
      * 
      * @param callable(ConnectionInterface): void $callback
