@@ -91,8 +91,9 @@ final readonly class FrameProcessor
             $offset += 8;
         }
 
-        // 4. Security Check: verify we have the full frame in memory
-        if (\strlen($raw) < $offset + (int) $payloadLength) {
+        // 4. Security Check: verify we have the full frame (header + mask + payload)
+        $requiredLength = $offset + ($isMasked ? 4 : 0) + (int) $payloadLength;
+        if (\strlen($raw) < $requiredLength) {
             return null;
         }
 
