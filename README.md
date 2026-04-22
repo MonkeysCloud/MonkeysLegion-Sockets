@@ -8,17 +8,18 @@ Install the package and publish the configuration:
 
 ```bash
 composer require monkeyscloud/monkeyslegion-sockets
-# Publish config in .mlc format
-php mlc socket:install --mlc
+
+# Interactive installer for config and JS client assets
+php ml socket:install
 ```
 
 ### Starting the Cluster
 ```bash
 # Start the production server
-php mlc socket:serve start
+php ml socket:serve start
 
 # Or specify host/port
-php mlc socket:serve start --host=0.0.0.0 --port=9000
+php ml socket:serve start --host=0.0.0.0 --port=9000
 ```
 
 ## 🛠️ Usage Examples

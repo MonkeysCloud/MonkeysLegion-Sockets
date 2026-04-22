@@ -225,12 +225,8 @@ final class StreamSocketDriver implements DriverInterface
     /**
      * Process data arriving on an existing socket.
      */
-    private function handleData(mixed $stream): void
+    private function handleData($stream): void
     {
-        if (!\is_resource($stream)) {
-            return;
-        }
-
         $streamId = (int) $stream;
         $connection = $this->connections[$streamId] ?? null;
         
@@ -250,9 +246,17 @@ final class StreamSocketDriver implements DriverInterface
 
         try {
             if (!$this->handshaked[$streamId]) {
-                $this->performHandshake($streamId, $data);
-            } else {
-                while (\strlen($this->buffers[$streamId]) >= 2) {
+                $pos = \strpos($this->buffers[$streamId], "\r\n\r\n");
+                if ($pos !== false) {
+                    $handshakeData = \substr($this->buffers[$streamId], 0, $pos + 4);
+                    $this->buffers[$streamId] = \substr($this->buffers[$streamId], $pos + 4);
+                    
+                    $this->performHandshake($streamId, $handshakeData);
+                }
+            }
+
+            if ($this->handshaked[$streamId]) {
+                while (isset($this->buffers[$streamId]) && \strlen($this->buffers[$streamId]) >= 2) {
                     $frame = $this->frameProcessor->decode($this->buffers[$streamId]);
                     if (!$frame) {
                         break;

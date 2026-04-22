@@ -50,15 +50,37 @@ class SocketInstallCommand extends Command
 
         if ($this->publish($source, $dest)) {
             $this->cliLine()
-                ->success("Done!")
-                ->space()
-                ->add("Configuration available at ", "white")
+                ->success("Configuration available at ")
                 ->add($dest, "bright_yellow")
                 ->print();
-                
-            return self::SUCCESS;
         }
 
-        return self::FAILURE;
+        // 4. Publish JS Assets
+        $publishJs = $this->ask('Would you like to publish the JavaScript client assets to public/js? (Y/n)');
+        if (empty($publishJs) || \strtolower($publishJs) === 'y') {
+            $jsSource = __DIR__ . '/../../../client/src/monkeys-sockets.js';
+            $jsDest = 'public/js/vendor/monkeys-sockets.js';
+
+            // Ensure destination directory exists
+            $jsDestPath = \base_path($jsDest);
+            $jsDestDir = \dirname($jsDestPath);
+            if (!\is_dir($jsDestDir)) {
+                @\mkdir($jsDestDir, 0755, true);
+            }
+
+            if ($this->publish($jsSource, $jsDest)) {
+                $this->cliLine()
+                    ->success("JS Client available at ")
+                    ->add($jsDest, "bright_yellow")
+                    ->print();
+            }
+        }
+
+        $this->cliLine()
+            ->space()
+            ->add("🐒 Sockets are ready to rock!", "bright_cyan", "bold")
+            ->print();
+
+        return self::SUCCESS;
     }
 }

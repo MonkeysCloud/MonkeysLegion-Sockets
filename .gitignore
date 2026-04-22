@@ -5,3 +5,6 @@
 /.vscode/
 /.idea/
 debug_headers.log
+
+# Node
+client/node_modules
