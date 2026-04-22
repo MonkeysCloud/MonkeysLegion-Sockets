@@ -56,9 +56,17 @@ class SocketInstallCommand extends Command
         }
 
         // 4. Publish JS Assets
-        if ($this->confirm('Would you like to publish the JavaScript client assets to public/js? (yes)')) {
+        $publishJs = $this->ask('Would you like to publish the JavaScript client assets to public/js? (Y/n)');
+        if (empty($publishJs) || \strtolower($publishJs) === 'y') {
             $jsSource = __DIR__ . '/../../../client/src/monkeys-sockets.js';
             $jsDest = 'public/js/vendor/monkeys-sockets.js';
+
+            // Ensure destination directory exists
+            $jsDestPath = \base_path($jsDest);
+            $jsDestDir = \dirname($jsDestPath);
+            if (!\is_dir($jsDestDir)) {
+                @\mkdir($jsDestDir, 0755, true);
+            }
 
             if ($this->publish($jsSource, $jsDest)) {
                 $this->cliLine()
