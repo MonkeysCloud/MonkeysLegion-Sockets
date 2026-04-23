@@ -358,12 +358,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/MonkeysCloud/MonkeysLegion-Mlc.git",
-                "reference": "de3dde43b70b80bf3a9be9c23ff392f8246f7ef9"
+                "reference": "fa0c98a82b48c46bd3de824e96ec99c9496caa89"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MonkeysCloud/MonkeysLegion-Mlc/zipball/de3dde43b70b80bf3a9be9c23ff392f8246f7ef9",
-                "reference": "de3dde43b70b80bf3a9be9c23ff392f8246f7ef9",
+                "url": "https://api.github.com/repos/MonkeysCloud/MonkeysLegion-Mlc/zipball/fa0c98a82b48c46bd3de824e96ec99c9496caa89",
+                "reference": "fa0c98a82b48c46bd3de824e96ec99c9496caa89",
                 "shasum": ""
             },
             "require": {
@@ -408,7 +408,7 @@
                 "issues": "https://github.com/MonkeysCloud/MonkeysLegion-Mlc/issues",
                 "source": "https://github.com/MonkeysCloud/MonkeysLegion-Mlc/tree/main"
             },
-            "time": "2026-04-20T21:39:03+00:00"
+            "time": "2026-04-22T20:09:28+00:00"
         },
         {
             "name": "nikic/php-parser",
@@ -2354,12 +2354,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "d9083d3f7f0d505985814a70d7b6b8402ce0be62"
+                "reference": "3b825eb530541d198c1e2bf0bbc3e92587458c39"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/d9083d3f7f0d505985814a70d7b6b8402ce0be62",
-                "reference": "d9083d3f7f0d505985814a70d7b6b8402ce0be62",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/3b825eb530541d198c1e2bf0bbc3e92587458c39",
+                "reference": "3b825eb530541d198c1e2bf0bbc3e92587458c39",
                 "shasum": ""
             },
             "require": {
@@ -2439,7 +2439,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-04-22T11:15:18+00:00"
+            "time": "2026-04-22T20:06:57+00:00"
         },
         {
             "name": "sebastian/cli-parser",
