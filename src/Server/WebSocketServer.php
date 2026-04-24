@@ -17,14 +17,55 @@ use MonkeysLegion\Sockets\Contracts\FormatterInterface;
  */
 class WebSocketServer
 {
+    private readonly \MonkeysLegion\Sockets\Service\RoomManager $roomManager;
+
     public function __construct(
         private readonly ConnectionRegistryInterface $registry,
         private readonly BroadcasterInterface $broadcaster,
-        private readonly FormatterInterface $formatter
-    ) {}
+        private readonly FormatterInterface $formatter,
+        private readonly ?\MonkeysLegion\Sockets\Contracts\ChannelAuthorizerInterface $authorizer = null
+    ) {
+        $this->roomManager = new \MonkeysLegion\Sockets\Service\RoomManager(
+            $this->registry,
+            $this->broadcaster,
+            $this->authorizer
+        );
+    }
 
     /**
-     * Add a connection to a specific room/channel.
+     * Join a public channel.
+     */
+    public function joinPublic(ConnectionInterface|string $connection, string $name): self
+    {
+        $conn = is_string($connection) ? $this->registry->get($connection) : $connection;
+        if ($conn) {
+            $this->roomManager->joinPublic($conn, $name);
+        }
+        return $this;
+    }
+
+    /**
+     * Join a private channel.
+     */
+    public function joinPrivate(ConnectionInterface|string $connection, string $name, array $parameters = []): bool
+    {
+        $conn = is_string($connection) ? $this->registry->get($connection) : $connection;
+        return $conn && $this->roomManager->joinPrivate($conn, $name, $parameters);
+    }
+
+    /**
+     * Join a presence channel.
+     * 
+     * @return array|false Returns members list if successful, false otherwise.
+     */
+    public function joinPresence(ConnectionInterface|string $connection, string $name, array $parameters = []): array|false
+    {
+        $conn = is_string($connection) ? $this->registry->get($connection) : $connection;
+        return $conn ? $this->roomManager->joinPresence($conn, $name, $parameters) : false;
+    }
+
+    /**
+     * Add a connection to a specific room/channel (Generic/Legacy).
      */
     public function join(ConnectionInterface|string $connection, string $room): self
     {
@@ -33,11 +74,38 @@ class WebSocketServer
     }
 
     /**
-     * Remove a connection from a specific room/channel.
+     * Leave a public channel.
+     */
+    public function leavePublic(ConnectionInterface|string $connection, string $name): self
+    {
+        $conn = is_string($connection) ? $this->registry->get($connection) : $connection;
+        if ($conn) {
+            $this->roomManager->leave($conn, "public:{$name}");
+        }
+        return $this;
+    }
+
+    /**
+     * Leave a private channel.
+     */
+    public function leavePrivate(ConnectionInterface|string $connection, string $name): self
+    {
+        $conn = is_string($connection) ? $this->registry->get($connection) : $connection;
+        if ($conn) {
+            $this->roomManager->leave($conn, "private:{$name}");
+        }
+        return $this;
+    }
+
+    /**
+     * Remove a connection from a specific room/channel (Generic/Legacy).
      */
     public function leave(ConnectionInterface|string $connection, string $room): self
     {
-        $this->registry->untag($connection, "room:{$room}");
+        $conn = is_string($connection) ? $this->registry->get($connection) : $connection;
+        if ($conn) {
+            $this->roomManager->leave($conn, "room:{$room}");
+        }
         return $this;
     }
 

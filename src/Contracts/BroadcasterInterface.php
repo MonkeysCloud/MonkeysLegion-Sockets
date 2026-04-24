@@ -28,6 +28,18 @@ interface BroadcasterInterface
     public function toConnection(string $connectionId): self;
 
     /**
+     * Target a public channel. 
+     * Semantically equivalent to to("public:$name").
+     */
+    public function publicChannel(string $name): self;
+
+    /**
+     * Target a private channel. 
+     * Semantically equivalent to to("private:$name").
+     */
+    public function privateChannel(string $name): self;
+
+    /**
      * Target a dynamic channel/tag using pattern binding.
      * Example: channel('User.{id}', ['id' => 1]) targets 'User.1'
      */
