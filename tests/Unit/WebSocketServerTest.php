@@ -91,6 +91,75 @@ final class WebSocketServerTest extends TestCase
     }
 
     #[Test]
+    public function it_can_join_public_channels(): void
+    {
+        $conn = $this->createMock(ConnectionInterface::class);
+        $conn->method('getId')->willReturn('c1');
+
+        $this->registry->expects($this->once())
+            ->method('tag')
+            ->with($conn, 'public:lobby');
+
+        $this->server->joinPublic($conn, 'lobby');
+    }
+
+    #[Test]
+    public function it_can_join_private_channels_with_authorizer(): void
+    {
+        $authorizer = $this->createMock(\MonkeysLegion\Sockets\Contracts\ChannelAuthorizerInterface::class);
+        $server = new WebSocketServer($this->registry, $this->broadcaster, $this->formatter, $authorizer);
+        
+        $conn = $this->createMock(ConnectionInterface::class);
+        $conn->method('getId')->willReturn('c1');
+
+        $authorizer->expects($this->once())
+            ->method('authorize')
+            ->willReturn(true);
+
+        $this->registry->expects($this->once())
+            ->method('tag')
+            ->with($conn, 'private:secret');
+
+        $this->assertTrue($server->joinPrivate($conn, 'secret'));
+    }
+
+    #[Test]
+    public function it_can_join_presence_channels(): void
+    {
+        $authorizer = $this->createMock(\MonkeysLegion\Sockets\Contracts\ChannelAuthorizerInterface::class);
+        $server = new WebSocketServer($this->registry, $this->broadcaster, $this->formatter, $authorizer);
+        
+        $conn = $this->createMock(ConnectionInterface::class);
+        $conn->method('getId')->willReturn('c1');
+        $conn->method('getMetadata')->willReturn([]);
+
+        $authorizer->method('authorize')->willReturn(true);
+        $this->registry->method('getByTag')->willReturn([$conn]);
+
+        $result = $server->joinPresence($conn, 'chat');
+        $this->assertIsArray($result);
+    }
+
+    #[Test]
+    public function it_can_leave_semantic_channels(): void
+    {
+        $conn = $this->createMock(ConnectionInterface::class);
+        $conn->method('getId')->willReturn('c1');
+        
+        $tags = [];
+        $this->registry->method('untag')
+            ->willReturnCallback(function($c, $t) use (&$tags) {
+                $tags[] = $t;
+            });
+
+        $this->server->leavePublic($conn, 'lobby');
+        $this->server->leavePrivate($conn, 'secret');
+
+        $this->assertContains('public:lobby', $tags);
+        $this->assertContains('private:secret', $tags);
+    }
+
+    #[Test]
     #[AllowMockObjectsWithoutExpectations]
     public function it_provides_access_to_components(): void
     {
