@@ -48,19 +48,26 @@ class AllowedOriginsMiddleware implements HandshakeMiddlewareInterface
 
     private function isOriginAllowed(string $origin): bool
     {
-        $origin = \strtolower($origin);
+        // Normalize origin: lowercase and remove trailing slash
+        $origin = \rtrim(\strtolower($origin), '/');
 
         foreach ($this->allowedOrigins as $allowed) {
-            $allowed = \strtolower($allowed);
+            $allowed = \rtrim(\strtolower($allowed), '/');
 
             // Exact match
             if ($origin === $allowed) {
                 return true;
             }
 
-            // Simple wildcard support (*.example.com)
+            // Wildcard support (*.example.com)
             if (\str_contains($allowed, '*')) {
-                $pattern = '/^' . \str_replace(['*', '.'], ['[^.]+', '\.'], $allowed) . '$/';
+                // Safely escape all characters (including potential regex controls like +, ?, [, etc.)
+                $escaped = \preg_quote($allowed, '#');
+                
+                // Convert the safely escaped '\*' back into a regex catch logic.
+                // Using '[^.]+' ensures it matches exactly one subdomain/segment level as originally intended.
+                $pattern = '#^' . \str_replace('\*', '[^.]+', $escaped) . '$#';
+                
                 if (\preg_match($pattern, $origin)) {
                     return true;
                 }
