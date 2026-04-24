@@ -122,6 +122,43 @@ sockets {
 }
 ```
 
+---
+
+## 📡 Communication Life-Cycles
+
+To master the MonkeysLegion ecosystem, it is essential to understand the "Hub and Spoke" model. The architecture distinguishes between **Long-Lived** listeners and **Short-Lived** emitters to ensure maximum performance.
+
+### 1. Server-to-Server (The Internal Bridge)
+This flow connects your application logic (e.g., a Controller, Command, or Job) to the WebSocket cluster.
+
+* **The Listener (Always Live):** When you run `php ml socket:serve`, the server starts a permanent loop. It keeps an "Eternal Ear" open to the **Redis Pub/Sub** or **Unix Socket** channel.
+* **The Broadcaster (Flash Messenger):** When your app calls `$broadcaster->emit()`, it "lives" for a few milliseconds—just long enough to throw the message into the channel—and then "dies" immediately.
+* **Benefit:** Your web request is never slowed down by the WebSocket delivery process. It's a "fire and forget" system.
+
+
+
+### 2. Client-to-Server (The Upstream Flow)
+Standard communication from the JS client to your backend logic.
+
+* **The Flow:** The `MonkeysSocket` JS client initiates a handshake and remains "Live" in the browser. When it emits an event, the server's **Middleware** validates the request and triggers your defined event handlers.
+* **Liveness:** Every message sent by the client resets the server-side "Heartbeat" timer, proving the connection is still active.
+
+### 3. Client-to-Client (The Secure Relay)
+Clients never talk directly to each other (P2P). Instead, the server acts as a secure **Mediator**.
+
+* **The Process:** Client A emits to the server. The server verifies the permissions, looks up Client B in the **Registry**, and "relays" the message.
+* **Echo Logic:** By default, the server broadcasts to "Everyone Else" (excluding the sender). This prevents "double-message" glitches in the sender's UI while ensuring the rest of the room is updated instantly.
+
+---
+
+### 📊 Summary Table
+
+| Flow Type | Listener (Always Live) | Emitter (Lives & Dies) | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Server-to-Server** | Socket Server (Worker) | App Broadcaster | Pushing logic updates to users |
+| **Client-to-Server** | Socket Server (Worker) | JS Client | Sending user actions to backend |
+| **Client-to-Client** | Other Connected Clients | The Sending Client | Private messaging / Chat rooms |
+
 ## 🏗️ Developer Notes & Standards
 
 ### MonkeysLegion v2 Standards
