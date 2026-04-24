@@ -78,10 +78,10 @@ class SocketServerCommand extends Command
         // 1. Setup Signal Handling for Graceful Shutdown
         if (\extension_loaded('pcntl')) {
             \pcntl_async_signals(true);
-            $shutdown = function () use ($finalHost, $finalPort) {
+            $shutdown = function () {
                 $this->cliLine()
                     ->space()
-                    ->add("🛑 Shutting down MonkeysLegion gracefully...", "bright_red", "bold")
+                    ->add("🛑 Shutting down the server gracefully...", "bright_red", "bold")
                     ->print();
                 
                 $this->driver->stop();

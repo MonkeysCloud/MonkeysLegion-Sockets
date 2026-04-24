@@ -23,11 +23,15 @@
     ],
     "autoload": {
         "psr-4": {
-            "MonkeysLegion\\Sockets\\": "src/",
+            "MonkeysLegion\\Sockets\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
             "MonkeysLegion\\Sockets\\Tests\\": "tests/"
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "require": {
         "php": ">=8.4",
         "ext-json": "*",

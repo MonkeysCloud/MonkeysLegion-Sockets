@@ -20,10 +20,10 @@ class RedisBroadcaster implements BroadcasterInterface
 {
     private ?string $currentTarget = null;
     private ?string $targetType = null;
-    private string $channel = 'ml_sockets:broadcast';
 
     public function __construct(
-        private readonly RedisClientInterface $redis
+        private readonly RedisClientInterface $redis,
+        private string $channel = 'ml_sockets:broadcast'
     ) {}
 
     public function broadcast(MessageInterface|string $message): void

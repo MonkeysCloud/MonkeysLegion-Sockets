@@ -276,7 +276,7 @@ $server = new WebSocketServer(
     $formatter, 
     new ChatAuthorizer() // Inject your policy
 );
- ù
+
 // Attach event logic
 $server->on('message', function($connection, $data) use ($server) {
     if ($data['event'] === 'join_team') {

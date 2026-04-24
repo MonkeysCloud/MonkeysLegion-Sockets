@@ -16,8 +16,11 @@ use MonkeysLegion\Sockets\Handshake\HandshakeNegotiator;
 use MonkeysLegion\Sockets\Handshake\ResponseFactory;
 use MonkeysLegion\Sockets\Broadcast\RedisBroadcaster;
 use MonkeysLegion\Sockets\Registry\PhpRedisClient;
+use MonkeysLegion\Sockets\Broadcast\UnixBroadcaster;
+
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+
 use InvalidArgumentException;
 use Redis;
 
@@ -111,10 +114,16 @@ class DriverFactory
      */
     public function createBroadcaster(): BroadcasterInterface
     {
-        if (!$this->redis) {
-            throw new \RuntimeException("Redis instance is required for broadcasting but was not provided to the DriverFactory.");
+        $broadcast = $this->config['broadcast'] ?? 'redis';
+        
+        if ($broadcast === 'unix') {
+            return new UnixBroadcaster($this->config['unix']['path'] ?? '/tmp/ml_sockets.sock');
         }
 
-        return new RedisBroadcaster(new PhpRedisClient($this->redis));
+        if (!$this->redis) {
+            throw new \RuntimeException("Redis instance is required for RedisBroadcaster but was not provided to the DriverFactory.");
+        }
+
+        return new RedisBroadcaster(new PhpRedisClient($this->redis), $this->config['redis']['channel'] ?? 'ml_sockets:broadcast');
     }
 }

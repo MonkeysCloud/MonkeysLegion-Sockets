@@ -18,6 +18,7 @@ use MonkeysLegion\Sockets\Contracts\FormatterInterface;
 class WebSocketServer
 {
     private readonly \MonkeysLegion\Sockets\Service\RoomManager $roomManager;
+    private ?\MonkeysLegion\Sockets\Contracts\DriverInterface $driver = null;
 
     public function __construct(
         private readonly ConnectionRegistryInterface $registry,
@@ -147,5 +148,34 @@ class WebSocketServer
     public function getFormatter(): FormatterInterface
     {
         return $this->formatter;
+    }
+
+    /**
+     * Attach the underlying transport driver.
+     */
+    public function setDriver(\MonkeysLegion\Sockets\Contracts\DriverInterface $driver): self
+    {
+        $this->driver = $driver;
+        return $this;
+    }
+
+    /**
+     * Bind a listener to transport events (e.g. 'message', 'open', 'close', 'error').
+     */
+    public function on(string $event, callable $callback): self
+    {
+        if (!isset($this->driver)) {
+            throw new \RuntimeException("Cannot bind to '$event': Transport driver is not attached to WebSocketServer. Call setDriver() first.");
+        }
+        
+        match ($event) {
+            'message' => $this->driver->onMessage($callback),
+            'open' => $this->driver->onOpen($callback),
+            'close' => $this->driver->onClose($callback),
+            'error' => $this->driver->onError($callback),
+            default => throw new \InvalidArgumentException("Unsupported event: [$event]")
+        };
+        
+        return $this;
     }
 }

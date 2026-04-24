@@ -62,7 +62,7 @@ class SocketInstallCommand extends Command
             $jsDest = 'public/js/vendor/monkeys-sockets.js';
 
             // Ensure destination directory exists
-            $jsDestPath = \base_path($jsDest);
+            $jsDestPath = \function_exists('base_path') ? \base_path($jsDest) : \getcwd() . '/' . $jsDest;
             $jsDestDir = \dirname($jsDestPath);
             if (!\is_dir($jsDestDir)) {
                 @\mkdir($jsDestDir, 0755, true);

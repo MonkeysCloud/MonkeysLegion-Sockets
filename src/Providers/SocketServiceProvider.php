@@ -91,7 +91,7 @@ class SocketServiceProvider
         // 6. Broadcaster
         $container->set(BroadcasterInterface::class, fn() => ($config['broadcast'] ?? 'redis') === 'unix'
             ? new UnixBroadcaster($config['unix']['path'] ?? '/tmp/ml_sockets.sock')
-            : new RedisBroadcaster($this->resolve(RedisClientInterface::class))
+            : new RedisBroadcaster($this->resolve(RedisClientInterface::class), $config['redis']['channel'] ?? 'ml_sockets:broadcast')
         );
 
         // 7. Formatter
@@ -101,10 +101,10 @@ class SocketServiceProvider
         );
 
         // 8. The Master Orchestrator (WebSocketServer)
-        $container->set(WebSocketServer::class, fn() => new WebSocketServer(
+        $container->set(WebSocketServer::class, fn() => (new WebSocketServer(
             $this->resolve(ConnectionRegistryInterface::class),
             $this->resolve(BroadcasterInterface::class),
             $this->resolve(FormatterInterface::class)
-        ));
+        ))->setDriver($this->resolve(DriverInterface::class)));
     }
 }

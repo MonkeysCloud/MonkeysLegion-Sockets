@@ -222,3 +222,29 @@ If any parameter is missing, a `RuntimeException` is thrown:
 // This throws: "Some placeholders in [User.{id}] were not provided"
 $broadcaster->channel('User.{id}', [])->emit('test', []);
 ```
+
+---
+
+## Wiring the Subscriber Daemon
+
+Because picking up messages from Redis or Unix involves a **blocking read loop**, the Subscriber MUST be booted as a parallel process alongside your `WebSocketServer`. 
+
+The typical flow is to spin up the bridge using `pcntl_fork`, a Swoole Process, or simply running a secondary background worker command.
+
+### Example Boot Flow (Standalone Worker)
+
+```php
+// broadcast-worker.php
+use MonkeysLegion\Sockets\Broadcast\RedisSubscriber;
+use MonkeysLegion\Sockets\Broadcast\BroadcastBridge;
+
+$subscriber = new RedisSubscriber($redisClient);
+$bridge = new BroadcastBridge($connectionRegistry, $serializer);
+
+// This will block and constantly listen
+$subscriber->subscribe(['ml_sockets:broadcast'], function ($payload, $channel) use ($bridge) {
+    $bridge->handle($payload);
+});
+```
+
+*Note: In production deployments, it is highly recommended to manage this subscriber worker using Supervisor or Systemd to ensure it automatically restarts if it crashes.*
