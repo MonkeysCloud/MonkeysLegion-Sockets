@@ -46,6 +46,22 @@ $server->on('message', function($connection, $message) {
 });
 ```
 
+## 📚 Documentation
+
+For exhaustive, professional documentation covering every layer of the architecture, please see the `docs/` folder:
+
+- [Handshake Security](docs/01-handshake.md)
+- [Frame Processing](docs/02-frames.md)
+- [Connection Registry](docs/03-connections.md)
+- [Broadcasting Layer](docs/04-broadcasting.md)
+- [Transport Drivers](docs/05-drivers.md)
+- [Channels & Authorization](docs/06-channels.md)
+- [Protocol & Serialization](docs/07-protocol.md)
+- [Services](docs/08-services.md)
+- [WebSocket Server](docs/09-server.md)
+- [Configuration & CLI](docs/10-configuration.md)
+- [Real-World Project Scenario](docs/11-real-world-example.md)
+
 ## 🏗️ Architectural Overview
 
 MonkeysLegion Sockets is a "Pure Consumer" DI-oriented library that decouples the transport layer (TCP/WebSockets) from the application logic. 
@@ -65,6 +81,41 @@ Selecting the right engine depends on your concurrency needs:
 | **Native** | Dev / Small App | Zero dependencies, Pure PHP | Blocking loop (High CPU) |
 | **React** | High Concurrency | Asynchronous, Pure PHP | Higher Memory |
 | **Swoole** | 50k+ Connections | C-Extension Performance, Lowest Footprint | Requires Swoole Ext |
+
+## 🏠 Public and Private Channels
+MonkeysLegion Sockets provides a first-class, semantically clear system for managing communication groups.
+
+### 🌍 Public Channels
+Public channels are open to any connected client. Use them for global notifications, lobby chats, or public feeds.
+```php
+// Server: Join a client to a public channel
+$server->joinPublic($connection, 'lobby');
+
+// Broadcast to a public channel
+$broadcaster->publicChannel('lobby')->emit('announcement', 'Welcome!');
+```
+
+### 🔒 Private Channels
+Private channels require server-side authorization. Use them for sensitive data, one-to-one messaging, or restricted groups.
+```php
+// Server: Join with authorization logic (Requires ChannelAuthorizerInterface)
+$server->joinPrivate($connection, 'team-alpha', ['token' => '...']);
+
+// Broadcast to a private channel
+$broadcaster->privateChannel('team-alpha')->emit('covert_op', 'Go!');
+```
+
+### 👥 Presence Channels
+A specialized type of private channel that tracks "Who's Online".
+```php
+// Server: Join and get current occupants
+$members = $server->joinPresence($connection, 'status-room');
+
+// 1. Automatically emits 'presence:joined' to existing members
+// 2. Returns an array of current members to the joiner
+```
+
+For more details on implementing security rules, see the [Rooms and Channels Architecture](ROOMS_AND_CHANNELS.md) guide.
 
 ## 🔒 Security Hardening
 
@@ -158,6 +209,94 @@ Clients never talk directly to each other (P2P). Instead, the server acts as a s
 | **Server-to-Server** | Socket Server (Worker) | App Broadcaster | Pushing logic updates to users |
 | **Client-to-Server** | Socket Server (Worker) | JS Client | Sending user actions to backend |
 | **Client-to-Client** | Other Connected Clients | The Sending Client | Private messaging / Chat rooms |
+
+## 🏗️ Real-World Implementation Guide
+ 
+Understanding which component to use and where to place your logic is key to a robust implementation.
+ 
+### 🌲 The Architectural Tree
+This map shows the hierarchy of responsibility within the system:
+ 
+```text
+WebSocketServer (The Orchestrator)
+├── Handshake (Middleware Pipeline)
+│   └── Rejects unauthorized HTTP requests before they become WebSockets.
+├── Registry (State Manager)
+│   └── Tracks who is online and what tags they have.
+├── RoomManager (High-Level Logic)
+│   ├── Public (Open rooms)
+│   ├── Private (Authorized channels)
+│   └── Presence (Real-time occupant tracking)
+└── Broadcaster (Distribution Bridge)
+    ├── Local (Internal delivery to local workers)
+    └── Global (Distributed delivery via Redis/Unix)
+```
+ 
+### 🚀 Full Implementation Scenario: Secure Team Chat
+ 
+#### 1. Define Authorization (The Policy)
+Create a class that implements `ChannelAuthorizerInterface` to protect your channels.
+ 
+```php
+class ChatAuthorizer implements ChannelAuthorizerInterface 
+{
+    public function authorize(ConnectionInterface $connection, string $channel, array $params = []): bool 
+    {
+        $userId = $connection->getMetadata()['user_id'] ?? null;
+        
+        // Example: Only members of Team 5 can join 'team-5'
+        if (str_starts_with($channel, 'team-')) {
+            $teamId = (int) substr($channel, 5);
+            return $this->db->isMember($userId, $teamId);
+        }
+        
+        return true; // Allow other channels
+    }
+}
+```
+
+#### 💡 Advanced: Authorization Pipelines
+For complex applications, you can decouple your rules into a **Pipeline**. This allows you to split logic (e.g. Rate Limiting vs Database checks) into separate, reusable classes.
+
+```php
+$pipeline = new AuthorizerPipeline();
+$pipeline->addAuthorizer(new IpBlockerAuthorizer(), 100); // Check IP first (High priority)
+$pipeline->addAuthorizer(new DatabaseAuthorizer(), 10);    // Check DB second
+
+$server = new WebSocketServer($registry, $broadcaster, $formatter, $pipeline);
+```
+ 
+#### 2. Bootstrap the Server
+In your Service Provider or entry point, wire up the components.
+ 
+```php
+$server = new WebSocketServer(
+    $registry, 
+    $broadcaster, 
+    $formatter, 
+    new ChatAuthorizer() // Inject your policy
+);
+ ù
+// Attach event logic
+$server->on('message', function($connection, $data) use ($server) {
+    if ($data['event'] === 'join_team') {
+        $server->joinPrivate($connection, "team-{$data['team_id']}");
+    }
+});
+```
+ 
+#### 3. Emitting from your Application
+Anywhere in your app (Controllers, Jobs, Commands), use the **Broadcaster** to push updates.
+ 
+```php
+// In a Controller after a database update
+$broadcaster->privateChannel('team-5')->emit('task_updated', [
+    'task_id' => 123,
+    'status' => 'completed'
+]);
+```
+
+---
 
 ## 🏗️ Developer Notes & Standards
 
