@@ -58,14 +58,18 @@ final class MsgPackFormatterTest extends TestCase
     public function it_throws_exception_on_format_failure(): void
     {
         $formatter = new MsgPackFormatter();
-        
-        // Circular reference
-        $data = [];
-        $data['self'] = &$data;
+
+        // Resources are not serializable by MessagePack
+        $resource = fopen('php://memory', 'r');
+        $data = ['handle' => $resource];
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Failed to format MessagePack payload');
-        
-        $formatter->format('fail', $data);
+
+        try {
+            $formatter->format('fail', $data);
+        } finally {
+            fclose($resource);
+        }
     }
 }

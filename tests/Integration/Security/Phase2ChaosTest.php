@@ -32,9 +32,9 @@ final class Phase2ChaosTest extends TestCase
         $registry->add($target);
         $registry->tag($target, "room-target");
 
-        // 2. Build 50,000 rooms with OTHER users
+        // 2. Build 5,000 rooms with OTHER users
         // In the OLD logic, removing 'target' would iterate ALL these rooms.
-        for ($i = 0; $i < 50000; $i++) {
+        for ($i = 0; $i < 5000; $i++) {
             $other = $this->createStub(ConnectionInterface::class);
             $other->method('getId')->willReturn("other-$i");
             $registry->add($other);

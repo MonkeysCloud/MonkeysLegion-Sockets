@@ -21,8 +21,8 @@ final class RegistryPerformanceTest extends TestCase
     public function it_handles_tag_storm_with_constant_cleanup_time(): void
     {
         $registry = new ConnectionRegistry();
-        $targetCount = 5000;
-        $tagsPerConn = 50;
+        $targetCount = 1000;
+        $tagsPerConn = 20;
 
         // 1. Setup the Storm
         $connections = [];

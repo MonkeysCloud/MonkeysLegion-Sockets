@@ -25,6 +25,10 @@ final class RedisRegistryIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
+        if (!extension_loaded('redis')) {
+            $this->markTestSkipped('Redis extension not available');
+        }
+
         $host = \getenv('REDIS_HOST') ?: '127.0.0.1';
         $port = (int) (\getenv('REDIS_PORT') ?: 6379);
 

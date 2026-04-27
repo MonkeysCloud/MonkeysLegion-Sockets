@@ -36,12 +36,12 @@
         "php": ">=8.4",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "psr/http-message": "^2.0@dev",
+        "psr/http-message": "^2.0",
         "psr/http-factory": "^1.1",
-        "psr/container": "^2.0@dev",
-        "psr/log": "^3.0@dev",
+        "psr/container": "^2.0",
+        "psr/log": "^3.0",
         "react/socket": "^1.16",
-        "rybakit/msgpack": "dev-master",
+        "rybakit/msgpack": "^0.10",
         "monkeyscloud/monkeyslegion-cli": "^2.0",
         "monkeyscloud/monkeyslegion-mlc": "^3.0",
         "monkeyscloud/monkeyslegion-di": "^2.0"
@@ -60,8 +60,8 @@
         "ext-posix": "Required for process management during integration testing."
     },
     "require-dev": {
-        "phpstan/phpstan": "2.2.x-dev",
-        "phpunit/phpunit": "^13.2@dev"
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^13.1"
     },
     "scripts": {
         "ci": [

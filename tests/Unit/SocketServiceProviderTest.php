@@ -20,6 +20,9 @@ final class SocketServiceProviderTest extends TestCase
 {
     protected function setUp(): void
     {
+        if (!extension_loaded('redis')) {
+            $this->markTestSkipped('Redis extension not available');
+        }
         Container::setInstance(new Container());
     }
 

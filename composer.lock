@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4bdddce173d4887f4404ae4fbdc2c216",
+    "content-hash": "12362c2869b400a3a7b9f5a007150c26",
     "packages": [
         {
             "name": "doctrine/inflector",
@@ -857,16 +857,16 @@
         },
         {
             "name": "monkeyscloud/monkeyslegion-migration",
-            "version": "2.0.2",
+            "version": "2.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/MonkeysCloud/MonkeysLegion-Migration.git",
-                "reference": "87a10692269e1117fb20db54af77e751216ac4df"
+                "reference": "2da3c2c500ea6762ca969b84e2b0b13988ef3784"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MonkeysCloud/MonkeysLegion-Migration/zipball/87a10692269e1117fb20db54af77e751216ac4df",
-                "reference": "87a10692269e1117fb20db54af77e751216ac4df",
+                "url": "https://api.github.com/repos/MonkeysCloud/MonkeysLegion-Migration/zipball/2da3c2c500ea6762ca969b84e2b0b13988ef3784",
+                "reference": "2da3c2c500ea6762ca969b84e2b0b13988ef3784",
                 "shasum": ""
             },
             "require": {
@@ -899,9 +899,9 @@
             "description": "Entity-schema diff engine, SQL migration runner, and dialect-aware DDL generation for MonkeysLegion v2.",
             "support": {
                 "issues": "https://github.com/MonkeysCloud/MonkeysLegion-Migration/issues",
-                "source": "https://github.com/MonkeysCloud/MonkeysLegion-Migration/tree/2.0.2"
+                "source": "https://github.com/MonkeysCloud/MonkeysLegion-Migration/tree/2.0.3"
             },
-            "time": "2026-04-19T22:34:59+00:00"
+            "time": "2026-04-25T04:47:38+00:00"
         },
         {
             "name": "monkeyscloud/monkeyslegion-mlc",
@@ -1306,22 +1306,21 @@
         },
         {
             "name": "psr/container",
-            "version": "dev-master",
+            "version": "2.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-fig/container.git",
-                "reference": "707984727bd5b2b670e59559d3ed2500240cf875"
+                "reference": "c71ecc56dfe541dbd90c5360474fbc405f8d5963"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-fig/container/zipball/707984727bd5b2b670e59559d3ed2500240cf875",
-                "reference": "707984727bd5b2b670e59559d3ed2500240cf875",
+                "url": "https://api.github.com/repos/php-fig/container/zipball/c71ecc56dfe541dbd90c5360474fbc405f8d5963",
+                "reference": "c71ecc56dfe541dbd90c5360474fbc405f8d5963",
                 "shasum": ""
             },
             "require": {
                 "php": ">=7.4.0"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -1354,9 +1353,9 @@
             ],
             "support": {
                 "issues": "https://github.com/php-fig/container/issues",
-                "source": "https://github.com/php-fig/container"
+                "source": "https://github.com/php-fig/container/tree/2.0.2"
             },
-            "time": "2023-09-22T11:11:30+00:00"
+            "time": "2021-11-05T16:47:00+00:00"
         },
         {
             "name": "psr/http-factory",
@@ -1415,7 +1414,7 @@
         },
         {
             "name": "psr/http-message",
-            "version": "dev-master",
+            "version": "2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-fig/http-message.git",
@@ -1430,7 +1429,6 @@
             "require": {
                 "php": "^7.2 || ^8.0"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -1582,7 +1580,7 @@
         },
         {
             "name": "psr/log",
-            "version": "dev-master",
+            "version": "3.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-fig/log.git",
@@ -1597,7 +1595,6 @@
             "require": {
                 "php": ">=8.0.0"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -2179,7 +2176,7 @@
         },
         {
             "name": "rybakit/msgpack",
-            "version": "dev-master",
+            "version": "v0.10.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/rybakit/msgpack.php.git",
@@ -2205,7 +2202,6 @@
                 "ext-decimal": "For converting overflowed integers to Decimal objects",
                 "ext-gmp": "For converting overflowed integers to GMP objects"
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -2231,7 +2227,7 @@
             ],
             "support": {
                 "issues": "https://github.com/rybakit/msgpack.php/issues",
-                "source": "https://github.com/rybakit/msgpack.php/tree/master"
+                "source": "https://github.com/rybakit/msgpack.php/tree/v0.10.0"
             },
             "funding": [
                 {
@@ -2243,7 +2239,7 @@
         },
         {
             "name": "symfony/polyfill-ctype",
-            "version": "v1.36.0",
+            "version": "v1.37.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-ctype.git",
@@ -2302,7 +2298,7 @@
                 "portable"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-ctype/tree/v1.36.0"
+                "source": "https://github.com/symfony/polyfill-ctype/tree/v1.37.0"
             },
             "funding": [
                 {
@@ -2326,7 +2322,7 @@
         },
         {
             "name": "symfony/polyfill-mbstring",
-            "version": "v1.36.0",
+            "version": "v1.37.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-mbstring.git",
@@ -2387,7 +2383,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.36.0"
+                "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.37.0"
             },
             "funding": [
                 {
@@ -2411,7 +2407,7 @@
         },
         {
             "name": "symfony/polyfill-php80",
-            "version": "v1.36.0",
+            "version": "v1.37.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-php80.git",
@@ -2471,7 +2467,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-php80/tree/v1.36.0"
+                "source": "https://github.com/symfony/polyfill-php80/tree/v1.37.0"
             },
             "funding": [
                 {
@@ -2759,11 +2755,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.2.x-dev",
+            "version": "2.1.51",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/5a952ccb686ac2dc3a4f3e596e9a57086bb8e225",
-                "reference": "5a952ccb686ac2dc3a4f3e596e9a57086bb8e225",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/dc3b523c45e714c70de2ac5113b958223b55dc59",
+                "reference": "dc3b523c45e714c70de2ac5113b958223b55dc59",
                 "shasum": ""
             },
             "require": {
@@ -2772,7 +2768,6 @@
             "conflict": {
                 "phpstan/phpstan-shim": "*"
             },
-            "default-branch": true,
             "bin": [
                 "phpstan",
                 "phpstan.phar"
@@ -2786,17 +2781,6 @@
             "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Ondřej Mirtes"
-                },
-                {
-                    "name": "Markus Staab"
-                },
-                {
-                    "name": "Vincent Langlet"
-                }
             ],
             "description": "PHPStan - PHP Static Analysis Tool",
             "keywords": [
@@ -2820,7 +2804,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-04-24T17:36:09+00:00"
+            "time": "2026-04-21T18:22:01+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -3207,16 +3191,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "dev-main",
+            "version": "13.1.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "8016bedbeb7188f48fe21793748d56adcff45467"
+                "reference": "ddd6401641861cdef94b922ef10d484f436e8dcd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/8016bedbeb7188f48fe21793748d56adcff45467",
-                "reference": "8016bedbeb7188f48fe21793748d56adcff45467",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/ddd6401641861cdef94b922ef10d484f436e8dcd",
+                "reference": "ddd6401641861cdef94b922ef10d484f436e8dcd",
                 "shasum": ""
             },
             "require": {
@@ -3230,7 +3214,7 @@
                 "phar-io/manifest": "^2.0.4",
                 "phar-io/version": "^3.2.1",
                 "php": ">=8.4.1",
-                "phpunit/php-code-coverage": "^14.1.6",
+                "phpunit/php-code-coverage": "^14.1.3",
                 "phpunit/php-file-iterator": "^7.0.0",
                 "phpunit/php-invoker": "^7.0.0",
                 "phpunit/php-text-template": "^6.0.0",
@@ -3240,7 +3224,6 @@
                 "sebastian/diff": "^8.1.0",
                 "sebastian/environment": "^9.3.0",
                 "sebastian/exporter": "^8.0.2",
-                "sebastian/file-filter": "^1.0",
                 "sebastian/git-state": "^1.0",
                 "sebastian/global-state": "^9.0.0",
                 "sebastian/object-enumerator": "^8.0.0",
@@ -3249,14 +3232,13 @@
                 "sebastian/version": "^7.0.0",
                 "staabm/side-effects-detector": "^1.0.5"
             },
-            "default-branch": true,
             "bin": [
                 "phpunit"
             ],
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "13.2-dev"
+                    "dev-main": "13.1-dev"
                 }
             },
             "autoload": {
@@ -3288,7 +3270,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/main"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/13.1.7"
             },
             "funding": [
                 {
@@ -3296,7 +3278,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-04-24T13:36:36+00:00"
+            "time": "2026-04-18T06:14:52+00:00"
         },
         {
             "name": "sebastian/cli-parser",
@@ -3773,75 +3755,6 @@
                 }
             ],
             "time": "2026-04-15T12:38:05+00:00"
-        },
-        {
-            "name": "sebastian/file-filter",
-            "version": "1.0.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/sebastianbergmann/file-filter.git",
-                "reference": "33a26f394330f6faa7684bb9cc73afb7727aae93"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/file-filter/zipball/33a26f394330f6faa7684bb9cc73afb7727aae93",
-                "reference": "33a26f394330f6faa7684bb9cc73afb7727aae93",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=8.4"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^13.0"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-main": "1.0-dev"
-                }
-            },
-            "autoload": {
-                "classmap": [
-                    "src/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "BSD-3-Clause"
-            ],
-            "authors": [
-                {
-                    "name": "Sebastian Bergmann",
-                    "email": "sebastian@phpunit.de",
-                    "role": "lead"
-                }
-            ],
-            "description": "Library for filtering files",
-            "homepage": "https://github.com/sebastianbergmann/file-filter",
-            "support": {
-                "issues": "https://github.com/sebastianbergmann/file-filter/issues",
-                "security": "https://github.com/sebastianbergmann/file-filter/security/policy",
-                "source": "https://github.com/sebastianbergmann/file-filter/tree/1.0.0"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/sebastianbergmann",
-                    "type": "github"
-                },
-                {
-                    "url": "https://liberapay.com/sebastianbergmann",
-                    "type": "liberapay"
-                },
-                {
-                    "url": "https://thanks.dev/u/gh/sebastianbergmann",
-                    "type": "thanks_dev"
-                },
-                {
-                    "url": "https://tidelift.com/funding/github/packagist/sebastian/file-filter",
-                    "type": "tidelift"
-                }
-            ],
-            "time": "2026-04-22T07:20:04+00:00"
         },
         {
             "name": "sebastian/git-state",
@@ -4510,14 +4423,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "phpstan/phpstan": 20,
-        "phpunit/phpunit": 20,
-        "psr/container": 20,
-        "psr/http-message": 20,
-        "psr/log": 20,
-        "rybakit/msgpack": 20
-    },
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
@@ -4526,5 +4432,5 @@
         "ext-mbstring": "*"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
