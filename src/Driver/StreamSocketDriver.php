@@ -38,6 +38,9 @@ final class StreamSocketDriver implements DriverInterface
     /** @var array<int, bool> Tracks if a connection has completed the handshake */
     private array $handshaked = [];
 
+    /** @var array<int, callable> Custom streams for IPC / subscribers */
+    private array $customStreams = [];
+
     /** @var array<string, callable(mixed...): void> Event callbacks */
     private array $callbacks = [];
 
@@ -67,6 +70,30 @@ final class StreamSocketDriver implements DriverInterface
     public function setRegistry(\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry): void
     {
         $this->registry = $registry;
+    }
+
+    /**
+     * Add a custom stream to monitor in the select loop.
+     * 
+     * @param resource $stream
+     */
+    public function addStream($stream, callable $callback): void
+    {
+        $id = (int) $stream;
+        $this->streams[$id] = $stream;
+        $this->customStreams[$id] = $callback;
+    }
+
+    /**
+     * Remove a monitored custom stream.
+     * 
+     * @param resource $stream
+     */
+    public function removeStream($stream): void
+    {
+        $id = (int) $stream;
+        unset($this->streams[$id]);
+        unset($this->customStreams[$id]);
     }
 
     /**
@@ -150,8 +177,11 @@ final class StreamSocketDriver implements DriverInterface
 
             // 5. Handle readable sockets (Accept or Read data)
             foreach ($read as $stream) {
+                $id = (int) $stream;
                 if ($stream === $this->server) {
                     $this->acceptConnection();
+                } elseif (isset($this->customStreams[$id])) {
+                    ($this->customStreams[$id])($stream);
                 } else {
                     $this->handleData($stream);
                 }

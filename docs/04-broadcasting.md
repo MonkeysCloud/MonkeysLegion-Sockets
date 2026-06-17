@@ -227,24 +227,13 @@ $broadcaster->channel('User.{id}', [])->emit('test', []);
 
 ## Wiring the Subscriber Daemon
 
-Because picking up messages from Redis or Unix involves a **blocking read loop**, the Subscriber MUST be booted as a parallel process alongside your `WebSocketServer`. 
+When you run the `socket:serve` console command, the subscriber (Unix/Redis) is **automatically bootstrapped and wired** to the WebSocket server's lifecycle, so you do not need to write extra custom code or start separate worker daemons:
 
-The typical flow is to spin up the bridge using `pcntl_fork`, a Swoole Process, or simply running a secondary background worker command.
+| Driver | Unix Socket Subscriber Wiring | Redis Subscriber Wiring |
+| :--- | :--- | :--- |
+| **Swoole** | Runs in a Swoole Process (`$server->addProcess`); propagates messages to worker processes via `$server->sendMessage`. | Runs in a Swoole Process (`$server->addProcess`); propagates messages to worker processes via `$server->sendMessage`. |
+| **ReactPHP** | Added as a non-blocking read stream directly on the active Event Loop (`Loop::addReadStream`). | Forked as a background child process via `pcntl_fork` and multiplexed via `stream_socket_pair` on the active Event Loop. |
+| **Stream** | Listened on as a non-blocking custom stream within the native `stream_select` multiplexing loop. | Forked as a background child process via `pcntl_fork` and multiplexed via `stream_socket_pair` within the native `stream_select` multiplexing loop. |
 
-### Example Boot Flow (Standalone Worker)
+In all cases, the daemon stops gracefully when the master socket server shuts down or receives SIGINT/SIGTERM.
 
-```php
-// broadcast-worker.php
-use MonkeysLegion\Sockets\Broadcast\RedisSubscriber;
-use MonkeysLegion\Sockets\Broadcast\BroadcastBridge;
-
-$subscriber = new RedisSubscriber($redisClient);
-$bridge = new BroadcastBridge($connectionRegistry, $serializer);
-
-// This will block and constantly listen
-$subscriber->subscribe(['ml_sockets:broadcast'], function ($payload, $channel) use ($bridge) {
-    $bridge->handle($payload);
-});
-```
-
-*Note: In production deployments, it is highly recommended to manage this subscriber worker using Supervisor or Systemd to ensure it automatically restarts if it crashes.*

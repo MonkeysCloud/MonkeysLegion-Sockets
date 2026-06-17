@@ -33,6 +33,9 @@ final class SwooleDriver implements DriverInterface
     /** @var \MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface|null */
     private ?\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry = null;
 
+    /** @var array<\Swoole\Process> */
+    private array $pendingProcesses = [];
+
     public function __construct(
         private readonly HandshakeNegotiator $negotiator = new HandshakeNegotiator(new ResponseFactory()),
         private readonly LoggerInterface $logger = new NullLogger(),
@@ -147,6 +150,16 @@ final class SwooleDriver implements DriverInterface
             }
         });
 
+        $this->server->on('pipeMessage', function (Server $server, int $srcWorkerId, $message) {
+            if (isset($this->callbacks['ipc_message'])) {
+                ($this->callbacks['ipc_message'])((string) $message);
+            }
+        });
+
+        foreach ($this->pendingProcesses as $process) {
+            $this->server->addProcess($process);
+        }
+
         $this->logger->info("Swoole WebSocket server starting on {$address}:{$port}");
         $this->server->start();
     }
@@ -174,5 +187,17 @@ final class SwooleDriver implements DriverInterface
     public function onError(callable $callback): void
     {
         $this->callbacks['error'] = $callback;
+    }
+
+    public function onIpcMessage(callable $callback): void
+    {
+        $this->callbacks['ipc_message'] = $callback;
+    }
+
+    public function registerIpcProcess(callable $callback): void
+    {
+        $this->pendingProcesses[] = new \Swoole\Process(function () use ($callback) {
+            $callback($this->server);
+        });
     }
 }
