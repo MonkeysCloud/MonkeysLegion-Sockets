@@ -59,4 +59,27 @@ final class DriverFactoryTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $factory->make();
     }
+
+    #[Test]
+    public function it_casts_string_config_options_to_integers(): void
+    {
+        $config = [
+            'driver' => 'stream',
+            'options' => [
+                'max_message_size' => '20971520',
+                'write_buffer_size' => '10485760',
+                'heartbeat_interval' => '120',
+            ],
+        ];
+        
+        $factory = new DriverFactory($config);
+        $driver = $factory->make();
+        $this->assertInstanceOf(StreamSocketDriver::class, $driver);
+
+        $config['driver'] = 'react';
+        $factory = new DriverFactory($config);
+        $driver = $factory->make();
+        $this->assertInstanceOf(ReactSocketDriver::class, $driver);
+    }
 }
+

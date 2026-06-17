@@ -67,9 +67,13 @@ class DriverFactory
         $name = $driverName ?? ($this->config['driver'] ?? 'stream');
         $options = $this->config['options'] ?? [];
 
+        $maxMessageSize = isset($options['max_message_size']) ? (int) $options['max_message_size'] : 10 * 1024 * 1024;
+        $writeBufferSize = isset($options['write_buffer_size']) ? (int) $options['write_buffer_size'] : 5242880;
+        $heartbeatInterval = isset($options['heartbeat_interval']) ? (int) $options['heartbeat_interval'] : 60;
+
         // 1. Shared Infrastructure
         $frameProcessor = new FrameProcessor();
-        $assembler = new MessageAssembler($options['max_message_size'] ?? 10 * 1024 * 1024);
+        $assembler = new MessageAssembler($maxMessageSize);
         
         // Use external negotiator if provided, else fallback to default
         $negotiator = $this->negotiator ?? new HandshakeNegotiator(new ResponseFactory());
@@ -81,23 +85,23 @@ class DriverFactory
                 assembler: $assembler,
                 negotiator: $negotiator,
                 logger: $this->logger,
-                writeBufferSize: $options['write_buffer_size'] ?? 5242880,
-                heartbeatInterval: $options['heartbeat_interval'] ?? 60
+                writeBufferSize: $writeBufferSize,
+                heartbeatInterval: $heartbeatInterval
             ),
             'swoole' => new SwooleDriver(
                 logger: $this->logger,
-                writeBufferSize: $options['write_buffer_size'] ?? 5242880,
-                heartbeatInterval: $options['heartbeat_interval'] ?? 60,
-                maxMessageSize: $options['max_message_size'] ?? 10485760
+                writeBufferSize: $writeBufferSize,
+                heartbeatInterval: $heartbeatInterval,
+                maxMessageSize: $maxMessageSize
             ),
             'react' => new ReactSocketDriver(
                 frameProcessor: $frameProcessor,
                 negotiator: $negotiator,
                 messageAssembler: $assembler,
                 logger: $this->logger,
-                writeBufferSize: $options['write_buffer_size'] ?? 5242880,
-                heartbeatInterval: $options['heartbeat_interval'] ?? 60,
-                maxMessageSize: $options['max_message_size'] ?? 10485760
+                writeBufferSize: $writeBufferSize,
+                heartbeatInterval: $heartbeatInterval,
+                maxMessageSize: $maxMessageSize
             ),
             default => throw new InvalidArgumentException("Unsupported WebSocket driver: [$name]")
         };
