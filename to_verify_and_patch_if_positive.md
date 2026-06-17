@@ -99,9 +99,9 @@ Documentation states the subscriber must be booted separately (fork, Swoole proc
 
 **Acceptance criteria**
 
-- [ ] Server → client: after `serialize('test', ['foo' => 'bar'])`, the JS client fires a `test` listener with `{ foo: 'bar' }`.
-- [ ] Client → server: after `socket.emit('ping', { ok: true })`, the PHP server decodes `event=ping` and `data/payload` containing `{ ok: true }`.
-- [ ] Unit tests updated for both directions; no duplicate or silent event drops.
+- [x] Server → client: after `serialize('test', ['foo' => 'bar'])`, the JS client fires a `test` listener with `{ foo: 'bar' }`.
+- [x] Client → server: after `socket.emit('ping', { ok: true })`, the PHP server decodes `event=ping` and `data/payload` containing `{ ok: true }`.
+- [x] Unit tests updated for both directions; no duplicate or silent event drops.
 
 ---
 

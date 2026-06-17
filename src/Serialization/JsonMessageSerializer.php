@@ -44,9 +44,15 @@ final readonly class JsonMessageSerializer implements MessageSerializerInterface
     {
         $decoded = \json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
 
-        if (!\is_array($decoded) || !isset($decoded['event'], $decoded['data'])) {
-            throw new InvalidArgumentException('Invalid message envelope: missing event or data keys.');
+        if (!\is_array($decoded) || !isset($decoded['event'])) {
+            throw new InvalidArgumentException('Invalid message envelope: missing event key.');
         }
+
+        if (!\array_key_exists('data', $decoded) && !\array_key_exists('payload', $decoded)) {
+            throw new InvalidArgumentException('Invalid message envelope: missing data or payload key.');
+        }
+
+        $data = \array_key_exists('data', $decoded) ? $decoded['data'] : $decoded['payload'];
 
         /** @var array<string, mixed> $metadata */
         $metadata = (array) ($decoded['metadata'] ?? []);
@@ -54,7 +60,7 @@ final readonly class JsonMessageSerializer implements MessageSerializerInterface
 
         return new MessageEnvelope(
             \is_string($event) ? $event : (string) $event,
-            $decoded['data'],
+            $data,
             $metadata
         );
     }
