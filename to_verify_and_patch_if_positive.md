@@ -144,10 +144,10 @@ The browser `WebSocket` API supports only `(url)` and `(url, protocols)`. The th
 
 ## Recommended PR checklist
 
-1. [ ] `SwooleDriver`: inject `HandshakeNegotiator`, implement `handshake` event
-2. [ ] `ReactSocketDriver`: run `Loop::run()` (or document async contract)
+1. [x] `SwooleDriver`: inject `HandshakeNegotiator`, implement `handshake` event
+2. [x] `ReactSocketDriver`: run `Loop::run()` (or document async contract)
 3. [x] Broadcast subscriber factory / CLI bootstrap for unix and redis
-4. [ ] Align JS client envelope to `JsonMessageSerializer` (`data` key)
-5. [ ] Fix JS `WebSocket` constructor for browser (≤2 args)
+4. [x] Align JS client envelope to `JsonMessageSerializer` (`data` key)
+5. [x] Fix JS `WebSocket` constructor for browser (≤2 args)
 6. [x] Reconcile broadcasting documentation
 
