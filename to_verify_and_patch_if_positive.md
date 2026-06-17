@@ -121,9 +121,9 @@ The browser `WebSocket` API supports only `(url)` and `(url, protocols)`. The th
 
 **Acceptance criteria**
 
-- [ ] Browser bundle calls `WebSocket` with at most two arguments.
-- [ ] Node build may keep extended options behind an environment check if needed.
-- [ ] No regression in connection success rate in Chrome/Firefox/Safari smoke tests.
+- [x] Browser bundle calls `WebSocket` with at most two arguments.
+- [x] Node build may keep extended options behind an environment check if needed.
+- [x] No regression in connection success rate in Chrome/Firefox/Safari smoke tests.
 
 ---
 
