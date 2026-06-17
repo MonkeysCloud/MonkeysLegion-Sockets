@@ -89,6 +89,7 @@ class DriverFactory
                 heartbeatInterval: $heartbeatInterval
             ),
             'swoole' => new SwooleDriver(
+                negotiator: $negotiator,
                 logger: $this->logger,
                 writeBufferSize: $writeBufferSize,
                 heartbeatInterval: $heartbeatInterval,

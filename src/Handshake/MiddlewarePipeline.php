@@ -29,6 +29,15 @@ class MiddlewarePipeline
     }
 
     /**
+     * Alias for add()
+     */
+    public function pipe(HandshakeMiddlewareInterface $middleware): self
+    {
+        $this->add($middleware);
+        return $this;
+    }
+
+    /**
      * Process the request through the onion layers.
      */
     public function process(ServerRequestInterface $request, callable $core): ResponseInterface

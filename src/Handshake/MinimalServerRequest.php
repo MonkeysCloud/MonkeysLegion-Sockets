@@ -16,6 +16,8 @@ use Psr\Http\Message\StreamInterface;
  */
 final class MinimalServerRequest implements ServerRequestInterface
 {
+    private array $queryParams = [];
+
     /**
      * @param array<string, string|string[]> $headers
      */
@@ -24,7 +26,12 @@ final class MinimalServerRequest implements ServerRequestInterface
         private readonly string $target,
         private array $headers = [],
         private readonly string $version = '1.1'
-    ) {}
+    ) {
+        $parts = \parse_url($this->target);
+        if (isset($parts['query'])) {
+            \parse_str($parts['query'], $this->queryParams);
+        }
+    }
 
     public function getMethod(): string { return $this->method; }
     public function getRequestTarget(): string { return $this->target; }
@@ -66,8 +73,13 @@ final class MinimalServerRequest implements ServerRequestInterface
     public function getServerParams(): array { return []; }
     public function getCookieParams(): array { return []; }
     public function withCookieParams(array $cookies): static { return $this; }
-    public function getQueryParams(): array { return []; }
-    public function withQueryParams(array $query): static { return $this; }
+    public function getQueryParams(): array { return $this->queryParams; }
+    public function withQueryParams(array $query): static
+    {
+        $new = clone $this;
+        $new->queryParams = $query;
+        return $new;
+    }
     public function getUploadedFiles(): array { return []; }
     public function withUploadedFiles(array $uploadedFiles): static { return $this; }
     public function getParsedBody(): mixed { return null; }

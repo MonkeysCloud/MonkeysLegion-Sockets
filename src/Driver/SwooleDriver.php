@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace MonkeysLegion\Sockets\Driver;
 
 use MonkeysLegion\Sockets\Contracts\DriverInterface;
+use MonkeysLegion\Sockets\Handshake\HandshakeNegotiator;
+use MonkeysLegion\Sockets\Handshake\ResponseFactory;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Swoole\WebSocket\Frame;
@@ -32,6 +34,7 @@ final class SwooleDriver implements DriverInterface
     private ?\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry = null;
 
     public function __construct(
+        private readonly HandshakeNegotiator $negotiator = new HandshakeNegotiator(new ResponseFactory()),
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly int $writeBufferSize = 5242880,
         private readonly int $heartbeatInterval = 60,
@@ -57,9 +60,51 @@ final class SwooleDriver implements DriverInterface
             'heartbeat_idle_time'        => $this->heartbeatInterval,
         ]);
 
-        $this->server->on('open', function (Server $server, $request) {
+        $this->server->on('handshake', function (\Swoole\Http\Request $request, \Swoole\Http\Response $response) {
+            $method = $request->server['request_method'] ?? 'GET';
+            $uri = $request->server['request_uri'] ?? '/';
+            if (!empty($request->server['query_string'])) {
+                $uri .= '?' . $request->server['query_string'];
+            }
+
+            $headers = [];
+            foreach ($request->header ?? [] as $name => $value) {
+                $headers[$name] = $value;
+            }
+
+            $protocol = $request->server['server_protocol'] ?? 'HTTP/1.1';
+            $version = \str_starts_with($protocol, 'HTTP/') ? \substr($protocol, 5) : '1.1';
+
+            $psrRequest = new \MonkeysLegion\Sockets\Handshake\MinimalServerRequest(
+                $method,
+                $uri,
+                $headers,
+                $version
+            );
+
+            try {
+                $psrResponse = $this->negotiator->negotiate($psrRequest);
+                $status = $psrResponse->getStatusCode();
+
+                $response->status($status);
+                foreach ($psrResponse->getHeaders() as $name => $values) {
+                    $response->header($name, \implode(', ', $values));
+                }
+
+                $response->end();
+
+                if ($status !== 101) {
+                    return false;
+                }
+            } catch (Throwable $e) {
+                $this->logger->error("Handshake failed: " . $e->getMessage());
+                $response->status(400);
+                $response->end();
+                return false;
+            }
+
             $fd = $request->fd;
-            $connection = new SwooleConnection($fd, $server, [
+            $connection = new SwooleConnection($fd, $this->server, [
                 'header' => $request->header ?? [],
                 'server' => $request->server ?? [],
                 'get' => $request->get ?? [],
@@ -74,6 +119,8 @@ final class SwooleDriver implements DriverInterface
             if (isset($this->callbacks['open'])) {
                 ($this->callbacks['open'])($connection);
             }
+
+            return true;
         });
 
         $this->server->on('message', function (Server $server, Frame $frame) {
