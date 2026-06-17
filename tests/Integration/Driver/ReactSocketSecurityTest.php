@@ -31,12 +31,10 @@ final class ReactSocketSecurityTest extends TestCase
             \file_put_contents($tempFile, $msg->getPayload());
         });
 
-        // ReactPHP requires the loop to run
         $pid = \pcntl_fork();
         if ($pid === 0) {
             try { 
                 $driver->listen('127.0.0.1', $port);
-                \React\EventLoop\Loop::run();
             } catch (\Throwable $e) {}
             exit(0);
         }

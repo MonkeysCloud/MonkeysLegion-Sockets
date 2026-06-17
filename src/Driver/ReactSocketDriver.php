@@ -105,6 +105,7 @@ final class ReactSocketDriver implements DriverInterface
         });
 
         $this->logger->info("ReactPHP WebSocket Server listening on $uri");
+        Loop::run();
     }
 
     private function startHeartbeatReaper(): void
@@ -227,6 +228,7 @@ final class ReactSocketDriver implements DriverInterface
         }
 
         $this->server?->close();
+        Loop::stop();
     }
 
     public function onOpen(callable $callback): void

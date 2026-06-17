@@ -62,10 +62,10 @@ Documentation states the subscriber must be booted separately (fork, Swoole proc
 
 **Acceptance criteria**
 
-- [ ] Running `socket:serve` with `broadcast=unix` creates the Unix socket and delivers a published message to connected WebSocket clients **without** extra custom code.
-- [ ] Running `socket:serve` with `broadcast=redis` subscribes to the configured channel and delivers messages to local connections.
-- [ ] Documentation describes one supported wiring path per driver (no “must fork separately” unless truly required).
-- [ ] Integration test: publish from `UnixBroadcaster` / `RedisBroadcaster` → message received by a connected test client after only `socket:serve`.
+- [x] Running `socket:serve` with `broadcast=unix` creates the Unix socket and delivers a published message to connected WebSocket clients **without** extra custom code.
+- [x] Running `socket:serve` with `broadcast=redis` subscribes to the configured channel and delivers messages to local connections.
+- [x] Documentation describes one supported wiring path per driver (no “must fork separately” unless truly required).
+- [x] Integration test: publish from `UnixBroadcaster` / `RedisBroadcaster` → message received by a connected test client after only `socket:serve`.
 
 ---
 
@@ -79,9 +79,9 @@ Documentation states the subscriber must be booted separately (fork, Swoole proc
 
 **Acceptance criteria**
 
-- [ ] A minimal script that only calls `$driver->listen($host, $port)` stays alive and accepts WebSocket connections for at least 30 seconds.
-- [ ] Process exits cleanly on `SIGTERM` / `$driver->stop()` if stop is supported.
-- [ ] Existing React integration tests pass without an external loop runner.
+- [x] A minimal script that only calls `$driver->listen($host, $port)` stays alive and accepts WebSocket connections for at least 30 seconds.
+- [x] Process exits cleanly on `SIGTERM` / `$driver->stop()` if stop is supported.
+- [x] Existing React integration tests pass without an external loop runner.
 
 ---
 
@@ -137,8 +137,8 @@ The browser `WebSocket` API supports only `(url)` and `(url, protocols)`. The th
 
 **Acceptance criteria**
 
-- [ ] A reader can follow the doc and choose one wiring approach per driver without conflicting instructions.
-- [ ] Examples match the behavior of `socket:serve` after §2 is fixed.
+- [x] A reader can follow the doc and choose one wiring approach per driver without conflicting instructions.
+- [x] Examples match the behavior of `socket:serve` after §2 is fixed.
 
 ---
 
@@ -146,8 +146,8 @@ The browser `WebSocket` API supports only `(url)` and `(url, protocols)`. The th
 
 1. [ ] `SwooleDriver`: inject `HandshakeNegotiator`, implement `handshake` event
 2. [ ] `ReactSocketDriver`: run `Loop::run()` (or document async contract)
-3. [ ] Broadcast subscriber factory / CLI bootstrap for unix and redis
+3. [x] Broadcast subscriber factory / CLI bootstrap for unix and redis
 4. [ ] Align JS client envelope to `JsonMessageSerializer` (`data` key)
 5. [ ] Fix JS `WebSocket` constructor for browser (≤2 args)
-6. [ ] Reconcile broadcasting documentation
+6. [x] Reconcile broadcasting documentation
 
