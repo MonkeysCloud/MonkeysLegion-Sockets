@@ -19,7 +19,7 @@ final class SocketServerCommandTest extends TestCase
     #[Test]
     public function it_calls_the_bootstrap_hook_if_registered_in_the_container(): void
     {
-        $driver = $this->createMock(DriverInterface::class);
+        $driver   = $this->createMock(DriverInterface::class);
         $registry = $this->createStub(ConnectionRegistryInterface::class);
 
         $registryStub    = $this->createStub(ConnectionRegistryInterface::class);
