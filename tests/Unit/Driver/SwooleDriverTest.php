@@ -66,11 +66,27 @@ final class SwooleDriverTest extends TestCase
         });
 
         $ref = new \ReflectionClass($driver);
-        $prop = $ref->getProperty('pendingProcesses');
+        $prop = $ref->getProperty('ipcProcessCallbacks');
         $prop->setAccessible(true);
-        /** @var array<\Swoole\Process> $processes */
-        $processes = $prop->getValue($driver);
-        $process = $processes[0];
+        /** @var array<callable> $callbacks */
+        $callbacks = $prop->getValue($driver);
+        $callback = $callbacks[0];
+
+        $process = new \Swoole\Process(function () use ($callback) {
+            if (\extension_loaded('pcntl')) {
+                \pcntl_signal(SIGTERM, SIG_DFL);
+                \pcntl_signal(SIGINT, SIG_DFL);
+            }
+            try {
+                $server = $this->createStub(\Swoole\WebSocket\Server::class);
+                $callback($server);
+            } catch (\Throwable $e) {
+                if (\class_exists(\Swoole\ExitException::class) && $e instanceof \Swoole\ExitException) {
+                    return;
+                }
+                throw $e;
+            }
+        });
 
         $pid = $process->start();
         $this->assertGreaterThan(0, $pid);
@@ -84,7 +100,36 @@ final class SwooleDriverTest extends TestCase
 
         $this->assertFalse($parentSignalTriggered, "Parent signal handler should not be triggered in the child process");
         $this->assertIsArray($result);
-        // If the process exited due to SIGTERM, signal key will be 15
         $this->assertSame(SIGTERM, $result['signal'] ?? null);
+    }
+
+    #[Test]
+    public function it_defers_and_executes_ipc_process_callbacks_on_listen(): void
+    {
+        if (!extension_loaded('swoole')) {
+            $this->markTestSkipped('Swoole extension required');
+        }
+
+        $driver = new SwooleDriver();
+        $serverReceived = null;
+
+        // Register callback BEFORE listen()
+        $driver->registerIpcProcess(function ($server) use (&$serverReceived) {
+            $serverReceived = $server;
+        });
+
+        // Verify it is registered in the callbacks array
+        $ref = new \ReflectionClass($driver);
+        $prop = $ref->getProperty('ipcProcessCallbacks');
+        $prop->setAccessible(true);
+        /** @var array<callable> $callbacks */
+        $callbacks = $prop->getValue($driver);
+
+        $this->assertCount(1, $callbacks);
+
+        $mockServer = $this->createStub(\Swoole\WebSocket\Server::class);
+        $callbacks[0]($mockServer);
+
+        $this->assertSame($mockServer, $serverReceived);
     }
 }

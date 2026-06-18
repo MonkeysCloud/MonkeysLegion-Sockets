@@ -26,6 +26,8 @@ class SocketServerCommand extends Command
         private readonly DriverInterface $driver,
         private readonly Config $config,
         private readonly \MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry,
+        private readonly ?\MonkeysLegion\Sockets\Server\WebSocketServer $webSocketServer = null,
+        private readonly ?\Psr\Container\ContainerInterface $container = null,
         private readonly ?\MonkeysLegion\Sockets\Contracts\RedisClientInterface $redis = null
     ) {
         parent::__construct();
@@ -103,6 +105,13 @@ class SocketServerCommand extends Command
             new \MonkeysLegion\Sockets\Serialization\JsonMessageSerializer()
         );
         $this->bootstrapSubscriber($bridge);
+
+        if ($this->webSocketServer && $this->container && $this->container->has(\MonkeysLegion\Sockets\Contracts\SocketServerBootstrapInterface::class)) {
+            $bootstrap = $this->container->get(\MonkeysLegion\Sockets\Contracts\SocketServerBootstrapInterface::class);
+            if ($bootstrap instanceof \MonkeysLegion\Sockets\Contracts\SocketServerBootstrapInterface) {
+                $bootstrap->boot($this->driver, $this->webSocketServer);
+            }
+        }
 
         try {
             $this->driver->listen($finalHost, $finalPort);

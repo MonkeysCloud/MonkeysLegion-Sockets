@@ -235,5 +235,8 @@ When you run the `socket:serve` console command, the subscriber (Unix/Redis) is 
 | **ReactPHP** | Added as a non-blocking read stream directly on the active Event Loop (`Loop::addReadStream`). | Forked as a background child process via `pcntl_fork` and multiplexed via `stream_socket_pair` on the active Event Loop. |
 | **Stream** | Listened on as a non-blocking custom stream within the native `stream_select` multiplexing loop. | Forked as a background child process via `pcntl_fork` and multiplexed via `stream_socket_pair` within the native `stream_select` multiplexing loop. |
 
+> [!NOTE]
+> Under the Swoole driver, the IPC user process callback is registered with `registerIpcProcess()`. The callback is deferred and invoked only when the server starts in `listen()`, receiving the active `Swoole\WebSocket\Server` instance created at runtime (rather than a copy at registration time).
+
 In all cases, the daemon stops gracefully when the master socket server shuts down or receives SIGINT/SIGTERM.
 

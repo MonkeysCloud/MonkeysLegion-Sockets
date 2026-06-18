@@ -33,8 +33,8 @@ final class SwooleDriver implements DriverInterface
     /** @var \MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface|null */
     private ?\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry = null;
 
-    /** @var array<\Swoole\Process> */
-    private array $pendingProcesses = [];
+    /** @var list<callable(\Swoole\WebSocket\Server): void> */
+    private array $ipcProcessCallbacks = [];
 
     public function __construct(
         private readonly HandshakeNegotiator $negotiator = new HandshakeNegotiator(new ResponseFactory()),
@@ -157,7 +157,21 @@ final class SwooleDriver implements DriverInterface
             }
         });
 
-        foreach ($this->pendingProcesses as $process) {
+        foreach ($this->ipcProcessCallbacks as $ipcCallback) {
+            $process = new \Swoole\Process(function () use ($ipcCallback, $server) {
+                if (\extension_loaded('pcntl')) {
+                    \pcntl_signal(SIGTERM, SIG_DFL);
+                    \pcntl_signal(SIGINT, SIG_DFL);
+                }
+                try {
+                    $ipcCallback($server);
+                } catch (\Throwable $e) {
+                    if (\class_exists(\Swoole\ExitException::class) && $e instanceof \Swoole\ExitException) {
+                        return;
+                    }
+                    throw $e;
+                }
+            });
             $server->addProcess($process);
         }
 
@@ -197,19 +211,6 @@ final class SwooleDriver implements DriverInterface
 
     public function registerIpcProcess(callable $callback): void
     {
-        $this->pendingProcesses[] = new \Swoole\Process(function () use ($callback) {
-            if (\extension_loaded('pcntl')) {
-                \pcntl_signal(SIGTERM, SIG_DFL);
-                \pcntl_signal(SIGINT, SIG_DFL);
-            }
-            try {
-                $callback($this->server);
-            } catch (Throwable $e) {
-                if (\class_exists(\Swoole\ExitException::class) && $e instanceof \Swoole\ExitException) {
-                    return;
-                }
-                throw $e;
-            }
-        });
+        $this->ipcProcessCallbacks[] = $callback;
     }
 }

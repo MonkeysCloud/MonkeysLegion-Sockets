@@ -151,46 +151,42 @@ $container->set(AuthorizerPipeline::class, function() use ($container) {
 
 By default, `php ml socket:serve` boots up a blank server that accepts connections but does nothing with incoming messages. 
 
-Let's hook into the driver to handle incoming logic. Create a Bootstrapper that registers listeners on the driver before it starts listening:
+Let's hook into the driver to handle incoming logic. Implement the `SocketServerBootstrapInterface` interface in a bootstrapper class:
 
 ```php
 namespace App\Sockets;
 
+use MonkeysLegion\Sockets\Contracts\SocketServerBootstrapInterface;
 use MonkeysLegion\Sockets\Contracts\DriverInterface;
 use MonkeysLegion\Sockets\Server\WebSocketServer;
 
-class SocketEventBootstrapper
+class SocketEventBootstrapper implements SocketServerBootstrapInterface
 {
-    public function __construct(
-        private DriverInterface $driver,
-        private WebSocketServer $server
-    ) {}
-    
-    public function boot(): void
+    public function boot(DriverInterface $driver, WebSocketServer $server): void
     {
-        $this->driver->on('message', function ($connection, $message) {
+        $driver->on('message', function ($connection, $message) use ($server) {
             $payload = json_decode($message->getPayload(), true);
             $action = $payload['action'] ?? null;
 
             match ($action) {
                 // Presence Channel: Track users actively viewing a document
-                'view_document' => $this->handleViewDocument($connection, $payload),
+                'view_document' => $this->handleViewDocument($connection, $payload, $server),
                 
                 // Typical Private Channel: Chatting in a team
-                'join_team' => $this->handleJoinTeam($connection, $payload),
+                'join_team' => $this->handleJoinTeam($connection, $payload, $server),
                 
                 // Active communication via sockets
-                'send_chat' => $this->handleSendChat($connection, $payload),
+                'send_chat' => $this->handleSendChat($connection, $payload, $server),
                 
                 default => null, // Ignore unknown actions
             };
         });
     }
 
-    private function handleViewDocument($connection, array $payload): void
+    private function handleViewDocument($connection, array $payload, WebSocketServer $server): void
     {
         $docId = $payload['doc_id'];
-        $members = $this->server->joinPresence($connection, "doc-{$docId}");
+        $members = $server->joinPresence($connection, "doc-{$docId}");
         
         if ($members !== false) {
             // Tell the user who else is here right now
@@ -203,23 +199,23 @@ class SocketEventBootstrapper
         }
     }
 
-    private function handleJoinTeam($connection, array $payload): void
+    private function handleJoinTeam($connection, array $payload, WebSocketServer $server): void
     {
         $teamId = $payload['team_id'];
-        if ($this->server->joinPrivate($connection, "team-{$teamId}")) {
+        if ($server->joinPrivate($connection, "team-{$teamId}")) {
             $connection->send(json_encode(['action' => 'team_joined', 'team_id' => $teamId]));
         } else {
             $connection->send(json_encode(['error' => 'Cannot join team']));
         }
     }
     
-    private function handleSendChat($connection, array $payload): void
+    private function handleSendChat($connection, array $payload, WebSocketServer $server): void
     {
         $teamId = $payload['team_id'];
         $text = $payload['text'];
         
         // Broadcast to everyone in the team channel
-        $this->server->to("private:team-{$teamId}")->emit('new_chat_message', [
+        $server->to("private:team-{$teamId}")->emit('new_chat_message', [
             'from_id' => $connection->getId(),
             'text' => htmlspecialchars($text)
         ]);
@@ -227,7 +223,7 @@ class SocketEventBootstrapper
 }
 ```
 
-*In a robust app, you would resolve `SocketEventBootstrapper` and call `boot()` right before `php ml socket:serve start` actually calls `$driver->listen()`.*
+Register your bootstrapper class in the DI container binding the `MonkeysLegion\Sockets\Contracts\SocketServerBootstrapInterface::class` key. The `socket:serve` console command will automatically resolve the hook and invoke the `boot()` method before the driver begins listening.
 
 ---
 
