@@ -26,9 +26,9 @@ class SocketServerCommand extends Command
         private readonly DriverInterface $driver,
         private readonly Config $config,
         private readonly \MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry,
+        private readonly ?\MonkeysLegion\Sockets\Contracts\RedisClientInterface $redis = null,
         private readonly ?\MonkeysLegion\Sockets\Server\WebSocketServer $webSocketServer = null,
-        private readonly ?\Psr\Container\ContainerInterface $container = null,
-        private readonly ?\MonkeysLegion\Sockets\Contracts\RedisClientInterface $redis = null
+        private readonly ?\Psr\Container\ContainerInterface $container = null
     ) {
         parent::__construct();
     }
