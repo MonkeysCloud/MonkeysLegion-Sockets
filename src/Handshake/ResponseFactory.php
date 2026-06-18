@@ -42,6 +42,7 @@ final class MinimalResponse implements ResponseInterface
         503 => 'Service Unavailable',
     ];
 
+    /** @var array<string, array<int, string>> */
     private array $headers = [];
 
     public function __construct(
@@ -66,10 +67,12 @@ final class MinimalResponse implements ResponseInterface
 
     public function withProtocolVersion(string $version): self { return $this; }
 
+    /** @return array<string, array<int, string>> */
     public function getHeaders(): array { return $this->headers; }
 
     public function hasHeader(string $name): bool { return isset($this->headers[$name]); }
 
+    /** @return array<int, string> */
     public function getHeader(string $name): array { return $this->headers[$name] ?? []; }
 
     public function getHeaderLine(string $name): string { return \implode(', ', $this->headers[$name] ?? []); }

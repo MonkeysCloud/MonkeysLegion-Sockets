@@ -38,6 +38,8 @@ class RoomManager
 
     /**
      * Join a private channel with authorization.
+     * 
+     * @param array<string, mixed> $parameters
      */
     public function joinPrivate(ConnectionInterface $connection, string $room, array $parameters = []): bool
     {
@@ -60,7 +62,8 @@ class RoomManager
      * Join a presence channel.
      * Automatically notifies other members and provides member list to the joiner.
      * 
-     * @return array|false Returns the list of current members if successful, false otherwise.
+     * @param array<string, mixed> $parameters
+     * @return array<int, array{id: string, info: mixed}>|false Returns the list of current members if successful, false otherwise.
      */
     public function joinPresence(ConnectionInterface $connection, string $room, array $parameters = []): array|false
     {
@@ -107,6 +110,8 @@ class RoomManager
 
     /**
      * Get data about a connection for presence events.
+     * 
+     * @return array{id: string, info: mixed}
      */
     private function getMemberData(ConnectionInterface $connection): array
     {

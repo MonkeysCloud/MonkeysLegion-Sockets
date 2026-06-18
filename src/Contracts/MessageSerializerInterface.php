@@ -16,6 +16,8 @@ interface MessageSerializerInterface
 {
     /**
      * Serialize data into a string (e.g., JSON envelope).
+     * 
+     * @param array<string, mixed> $metadata
      */
     public function serialize(string $event, mixed $data, array $metadata = []): string;
 

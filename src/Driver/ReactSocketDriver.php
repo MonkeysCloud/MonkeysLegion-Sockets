@@ -39,15 +39,19 @@ final class ReactSocketDriver implements DriverInterface
     /** @var \React\EventLoop\TimerInterface|null Reaper timer */
     private ?\React\EventLoop\TimerInterface $reaperTimer = null;
 
+    private readonly MessageAssembler $messageAssembler;
+
     public function __construct(
         private readonly FrameProcessor $frameProcessor = new FrameProcessor(),
         private readonly HandshakeNegotiator $negotiator = new HandshakeNegotiator(new ResponseFactory()),
-        private readonly MessageAssembler $messageAssembler = new MessageAssembler(),
+        ?MessageAssembler $messageAssembler = null,
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly int $writeBufferSize = 5242880,
         private readonly int $heartbeatInterval = 60,
         private readonly int $maxMessageSize = 10485760
-    ) {}
+    ) {
+        $this->messageAssembler = $messageAssembler ?? new MessageAssembler($this->maxMessageSize);
+    }
 
     public function setRegistry(\MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface $registry): void
     {
@@ -57,12 +61,13 @@ final class ReactSocketDriver implements DriverInterface
     public function listen(string $address, int $port): void
     {
         $uri = "{$address}:{$port}";
-        $this->server = new SocketServer($uri);
+        $server = new SocketServer($uri);
+        $this->server = $server;
 
         // Start the heartbeat reaper
         $this->startHeartbeatReaper();
 
-        $this->server->on('connection', function (ReactRawConnection $connection) {
+        $server->on('connection', function (ReactRawConnection $connection) {
             $wrapper = new ReactConnection(
                 connection: $connection, 
                 frameProcessor: $this->frameProcessor,
@@ -105,6 +110,7 @@ final class ReactSocketDriver implements DriverInterface
         });
 
         $this->logger->info("ReactPHP WebSocket Server listening on $uri");
+        Loop::run();
     }
 
     private function startHeartbeatReaper(): void
@@ -227,6 +233,7 @@ final class ReactSocketDriver implements DriverInterface
         }
 
         $this->server?->close();
+        Loop::stop();
     }
 
     public function onOpen(callable $callback): void

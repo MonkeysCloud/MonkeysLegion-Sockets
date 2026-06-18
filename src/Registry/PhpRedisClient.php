@@ -28,26 +28,32 @@ final readonly class PhpRedisClient implements RedisClientInterface
         return \is_int($result) ? $result : (int) $result;
     }
 
-    public function sMembers(string $key): array
-    {
-        $result = $this->redis->sMembers($key);
-        return \is_array($result) ? $result : [];
-    }
-
-    public function del(string $key): int
-    {
-        $result = $this->redis->del($key);
-        return \is_int($result) ? $result : (int) $result;
-    }
-
-    public function publish(string $channel, string $message): int
-    {
-        $result = $this->redis->publish($channel, $message);
-        return \is_int($result) ? $result : (int) $result;
-    }
-
-    public function subscribe(array $channels, callable $callback): void
-    {
-        $this->redis->subscribe($channels, $callback);
-    }
+    /**
+     * @return array<int, string>
+     */
+     public function sMembers(string $key): array
+     {
+         $result = $this->redis->sMembers($key);
+         return \is_array($result) ? $result : [];
+     }
+ 
+     public function del(string $key): int
+     {
+         $result = $this->redis->del($key);
+         return \is_int($result) ? $result : (int) $result;
+     }
+ 
+     public function publish(string $channel, string $message): int
+     {
+         $result = $this->redis->publish($channel, $message);
+         return \is_int($result) ? $result : (int) $result;
+     }
+ 
+     /**
+      * @param array<int, string> $channels
+      */
+     public function subscribe(array $channels, callable $callback): void
+     {
+         $this->redis->subscribe($channels, $callback);
+     }
 }

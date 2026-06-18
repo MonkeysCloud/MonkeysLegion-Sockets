@@ -14,10 +14,10 @@ use RuntimeException;
  */
 final class MessageAssembler
 {
-    /** @var array<int, string> Buffered payloads indexed by stream ID */
+    /** @var array<int|string, string> Buffered payloads indexed by stream ID */
     private array $buffers = [];
 
-    /** @var array<int, int> Initial opcodes preserved for the full message */
+    /** @var array<int|string, int> Initial opcodes preserved for the full message */
     private array $opcodes = [];
 
     public function __construct(

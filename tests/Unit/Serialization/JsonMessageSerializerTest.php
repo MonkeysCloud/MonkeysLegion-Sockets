@@ -57,4 +57,41 @@ final class JsonMessageSerializerTest extends TestCase
         $this->expectException(\JsonException::class);
         $this->serializer->unserialize('{ invalid json }');
     }
+
+    #[Test]
+    public function it_unserializes_payload_key_for_backward_compatibility(): void
+    {
+        $payload = \json_encode([
+            'event' => 'client.emit',
+            'payload' => ['ok' => true],
+        ]);
+
+        $envelope = $this->serializer->unserialize($payload);
+
+        $this->assertInstanceOf(MessageEnvelope::class, $envelope);
+        $this->assertSame('client.emit', $envelope->event);
+        $this->assertSame(['ok' => true], $envelope->data);
+    }
+
+    #[Test]
+    public function it_prefers_data_key_over_payload_when_both_present(): void
+    {
+        $payload = \json_encode([
+            'event' => 'dual',
+            'data' => 'from_data',
+            'payload' => 'from_payload',
+        ]);
+
+        $envelope = $this->serializer->unserialize($payload);
+
+        $this->assertSame('dual', $envelope->event);
+        $this->assertSame('from_data', $envelope->data);
+    }
+
+    #[Test]
+    public function it_throws_on_missing_data_and_payload(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->serializer->unserialize(\json_encode(['event' => 'no_data']));
+    }
 }

@@ -47,9 +47,16 @@ final class RedisRegistryIntegrationTest extends TestCase
 
     protected function tearDown(): void
     {
-        if ($this->redis) {
-            $this->redis->del($this->redis->keys('ml_sockets:*'));
-            $this->redis->close();
+        if ($this->client && $this->redis) {
+            try {
+                $keys = $this->redis->keys('ml_sockets:*');
+                if (!empty($keys)) {
+                    $this->redis->del($keys);
+                }
+                $this->redis->close();
+            } catch (RedisException) {
+                // Ignore connection close errors in tearDown
+            }
         }
     }
 

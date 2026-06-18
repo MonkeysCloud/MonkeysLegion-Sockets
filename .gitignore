@@ -8,3 +8,5 @@ debug_headers.log
 
 # Node
 client/node_modules
+tests/diagnostics/reap_bypass.signal
+phpstan-baseline.neon

@@ -43,7 +43,7 @@ $driver->onMessage(function($connection, $message) use ($driver) {
     if (($data['event'] ?? '') === 'hello') {
         $connection->send(\json_encode([
             'event' => 'hello',
-            'payload' => ['reply' => 'Hi Monkey!']
+            'data' => ['reply' => 'Hi Monkey!']
         ]));
     }
 });

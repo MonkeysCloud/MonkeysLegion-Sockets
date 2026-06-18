@@ -40,6 +40,8 @@ class AuthorizerPipeline implements ChannelAuthorizerInterface
      * Authorize a join request.
      * All authorizers in the pipeline must return true for the request to pass.
      * If any return false, the join is immediately rejected.
+     * 
+     * @param array<string, mixed> $parameters
      */
     public function authorize(ConnectionInterface $connection, string $channel, array $parameters = []): bool
     {
