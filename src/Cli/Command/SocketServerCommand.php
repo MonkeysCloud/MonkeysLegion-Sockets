@@ -82,7 +82,7 @@ class SocketServerCommand extends Command
             ->print();
 
         // 1. Setup Signal Handling for Graceful Shutdown
-        if (\extension_loaded('pcntl')) {
+        if (!($this->driver instanceof \MonkeysLegion\Sockets\Driver\SwooleDriver) && \extension_loaded('pcntl')) {
             \pcntl_async_signals(true);
             $shutdown = function () {
                 $this->cliLine()

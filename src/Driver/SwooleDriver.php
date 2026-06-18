@@ -198,7 +198,18 @@ final class SwooleDriver implements DriverInterface
     public function registerIpcProcess(callable $callback): void
     {
         $this->pendingProcesses[] = new \Swoole\Process(function () use ($callback) {
-            $callback($this->server);
+            if (\extension_loaded('pcntl')) {
+                \pcntl_signal(SIGTERM, SIG_DFL);
+                \pcntl_signal(SIGINT, SIG_DFL);
+            }
+            try {
+                $callback($this->server);
+            } catch (Throwable $e) {
+                if (\class_exists(\Swoole\ExitException::class) && $e instanceof \Swoole\ExitException) {
+                    return;
+                }
+                throw $e;
+            }
         });
     }
 }

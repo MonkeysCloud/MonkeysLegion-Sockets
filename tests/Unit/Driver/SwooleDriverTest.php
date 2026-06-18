@@ -43,4 +43,48 @@ final class SwooleDriverTest extends TestCase
         $this->assertSame('1', $connection->getId());
         $this->assertSame(['test' => 'meta'], $connection->getMetadata());
     }
+
+    #[Test]
+    public function it_resets_signal_handlers_in_ipc_process(): void
+    {
+        if (!extension_loaded('swoole') || !extension_loaded('pcntl')) {
+            $this->markTestSkipped('Swoole and pcntl extensions required');
+        }
+
+        // Setup a dummy pcntl signal handler in the parent (simulating SocketServerCommand)
+        $parentSignalTriggered = false;
+        \pcntl_async_signals(true);
+        \pcntl_signal(SIGTERM, function () use (&$parentSignalTriggered) {
+            $parentSignalTriggered = true;
+            exit(0);
+        });
+
+        $driver = new SwooleDriver();
+        $driver->registerIpcProcess(function () {
+            // Keep the child process alive so we can send a signal to it
+            \usleep(500000);
+        });
+
+        $ref = new \ReflectionClass($driver);
+        $prop = $ref->getProperty('pendingProcesses');
+        $prop->setAccessible(true);
+        /** @var array<\Swoole\Process> $processes */
+        $processes = $prop->getValue($driver);
+        $process = $processes[0];
+
+        $pid = $process->start();
+        $this->assertGreaterThan(0, $pid);
+
+        \usleep(100000);
+        \Swoole\Process::kill($pid, SIGTERM);
+
+        $result = \Swoole\Process::wait(true);
+
+        \pcntl_signal(SIGTERM, SIG_DFL);
+
+        $this->assertFalse($parentSignalTriggered, "Parent signal handler should not be triggered in the child process");
+        $this->assertIsArray($result);
+        // If the process exited due to SIGTERM, signal key will be 15
+        $this->assertSame(SIGTERM, $result['signal'] ?? null);
+    }
 }
