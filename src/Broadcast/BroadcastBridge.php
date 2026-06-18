@@ -31,15 +31,19 @@ class BroadcastBridge
     {
         try {
             $envelope = \json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+            if (!\is_array($envelope)) {
+                $this->logger->warning("BroadcastBridge received non-array payload");
+                return;
+            }
             
-            $type = $envelope['type'] ?? 'broadcast';
-            $target = $envelope['target'] ?? null;
-            $event = $envelope['event'] ?? 'message';
+            $type = isset($envelope['type']) && \is_string($envelope['type']) ? $envelope['type'] : 'broadcast';
+            $target = isset($envelope['target']) && \is_string($envelope['target']) ? $envelope['target'] : '';
+            $event = isset($envelope['event']) && \is_string($envelope['event']) ? $envelope['event'] : 'message';
             $data = $envelope['data'] ?? [];
 
             // 1. Resolve outgoing message (Skip serialization for raw events)
             $message = ($event === 'raw') 
-                ? (string) $data 
+                ? (\is_string($data) ? $data : (\is_scalar($data) ? (string) $data : ''))
                 : $this->serializer->serialize($event, $data);
 
             // 2. Dispatch based on type
@@ -47,7 +51,7 @@ class BroadcastBridge
                 'broadcast' => $this->broadcast($message),
                 'tag' => $this->tagBroadcast($target, $message),
                 'connection' => $this->directSend($target, $message),
-                default => $this->logger->warning("Unknown bridge message type: $type"),
+                default => $this->logger->warning("Unknown bridge message type: {$type}"),
             };
 
         } catch (\Throwable $e) {

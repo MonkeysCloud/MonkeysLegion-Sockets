@@ -41,7 +41,7 @@ final class StreamSocketDriver implements DriverInterface
     /** @var array<int, callable> Custom streams for IPC / subscribers */
     private array $customStreams = [];
 
-    /** @var array<string, callable(mixed...): void> Event callbacks */
+    /** @var array<string, callable> Event callbacks */
     private array $callbacks = [];
 
     /** @var bool Loop state control */
@@ -98,6 +98,8 @@ final class StreamSocketDriver implements DriverInterface
 
     /**
      * Start the socket server and enter the event loop.
+     * 
+     * @param array<string, mixed> $context
      */
     public function listen(string $address, int $port, array $context = []): void
     {
@@ -171,7 +173,10 @@ final class StreamSocketDriver implements DriverInterface
             if ($write) {
                 foreach ($write as $stream) {
                     $id = (int) $stream;
-                    $this->connections[$id]?->flush();
+                    $connection = $this->connections[$id] ?? null;
+                    if ($connection instanceof StreamConnection) {
+                        $connection->flush();
+                    }
                 }
             }
 
@@ -254,8 +259,10 @@ final class StreamSocketDriver implements DriverInterface
 
     /**
      * Process data arriving on an existing socket.
+     * 
+     * @param resource $stream
      */
-    private function handleData($stream): void
+    private function handleData(mixed $stream): void
     {
         $streamId = (int) $stream;
         $connection = $this->connections[$streamId] ?? null;
@@ -341,24 +348,22 @@ final class StreamSocketDriver implements DriverInterface
     private function performHandshake(int $streamId, string $data): void
     {
         try {
-            if ($this->negotiator) {
-                $request = RequestParser::parse($data);
-                $response = $this->negotiator->negotiate($request);
-                
-                $header = \sprintf(
-                    "HTTP/%s %d %s\r\n",
-                    $response->getProtocolVersion(),
-                    $response->getStatusCode(),
-                    $response->getReasonPhrase()
-                );
+            $request = RequestParser::parse($data);
+            $response = $this->negotiator->negotiate($request);
+            
+            $header = \sprintf(
+                "HTTP/%s %d %s\r\n",
+                $response->getProtocolVersion(),
+                $response->getStatusCode(),
+                $response->getReasonPhrase()
+            );
 
-                foreach ($response->getHeaders() as $name => $values) {
-                    $header .= \sprintf("%s: %s\r\n", $name, \implode(', ', $values));
-                }
-                $header .= "\r\n";
-
-                @\fwrite($this->streams[$streamId], $header);
+            foreach ($response->getHeaders() as $name => $values) {
+                $header .= \sprintf("%s: %s\r\n", $name, \implode(', ', $values));
             }
+            $header .= "\r\n";
+
+            @\fwrite($this->streams[$streamId], $header);
 
             $this->handshaked[$streamId] = true;
             

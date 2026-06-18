@@ -55,6 +55,9 @@ class RedisBroadcaster implements BroadcasterInterface
         return $this->to("private:{$name}");
     }
 
+    /**
+     * @param array<string, scalar> $parameters
+     */
     public function channel(string $pattern, array $parameters): self
     {
         $resolved = $pattern;

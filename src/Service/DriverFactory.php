@@ -36,6 +36,9 @@ class DriverFactory
     private ?Redis $redis = null;
     private ?HandshakeNegotiator $negotiator = null;
 
+    /**
+     * @param array<string, mixed> $config
+     */
     public function __construct(
         private readonly array $config,
         private readonly LoggerInterface $logger = new NullLogger()
@@ -64,12 +67,14 @@ class DriverFactory
      */
     public function make(?string $driverName = null): DriverInterface
     {
-        $name = $driverName ?? ($this->config['driver'] ?? 'stream');
-        $options = $this->config['options'] ?? [];
+        $driverConfig = $this->config['driver'] ?? 'stream';
+        $name = $driverName ?? (\is_string($driverConfig) ? $driverConfig : 'stream');
+        
+        $options = \is_array($this->config['options'] ?? null) ? $this->config['options'] : [];
 
-        $maxMessageSize = isset($options['max_message_size']) ? (int) $options['max_message_size'] : 10 * 1024 * 1024;
-        $writeBufferSize = isset($options['write_buffer_size']) ? (int) $options['write_buffer_size'] : 5242880;
-        $heartbeatInterval = isset($options['heartbeat_interval']) ? (int) $options['heartbeat_interval'] : 60;
+        $maxMessageSize = isset($options['max_message_size']) && \is_scalar($options['max_message_size']) ? (int) $options['max_message_size'] : 10 * 1024 * 1024;
+        $writeBufferSize = isset($options['write_buffer_size']) && \is_scalar($options['write_buffer_size']) ? (int) $options['write_buffer_size'] : 5242880;
+        $heartbeatInterval = isset($options['heartbeat_interval']) && \is_scalar($options['heartbeat_interval']) ? (int) $options['heartbeat_interval'] : 60;
 
         // 1. Shared Infrastructure
         $frameProcessor = new FrameProcessor();
@@ -119,16 +124,26 @@ class DriverFactory
      */
     public function createBroadcaster(): BroadcasterInterface
     {
-        $broadcast = $this->config['broadcast'] ?? 'redis';
+        $broadcastConfig = $this->config['broadcast'] ?? 'redis';
+        $broadcast = \is_string($broadcastConfig) ? $broadcastConfig : 'redis';
         
         if ($broadcast === 'unix') {
-            return new UnixBroadcaster($this->config['unix']['path'] ?? '/tmp/ml_sockets.sock');
+            $unixConfig = $this->config['unix'] ?? [];
+            $unixPath = \is_array($unixConfig) && isset($unixConfig['path']) && \is_string($unixConfig['path'])
+                ? $unixConfig['path'] 
+                : '/tmp/ml_sockets.sock';
+            return new UnixBroadcaster($unixPath);
         }
 
         if (!$this->redis) {
             throw new \RuntimeException("Redis instance is required for RedisBroadcaster but was not provided to the DriverFactory.");
         }
 
-        return new RedisBroadcaster(new PhpRedisClient($this->redis), $this->config['redis']['channel'] ?? 'ml_sockets:broadcast');
+        $redisConfig = $this->config['redis'] ?? [];
+        $redisChannel = \is_array($redisConfig) && isset($redisConfig['channel']) && \is_string($redisConfig['channel'])
+            ? $redisConfig['channel']
+            : 'ml_sockets:broadcast';
+
+        return new RedisBroadcaster(new PhpRedisClient($this->redis), $redisChannel);
     }
 }

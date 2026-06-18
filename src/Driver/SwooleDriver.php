@@ -27,7 +27,7 @@ final class SwooleDriver implements DriverInterface
     /** @var array<int, SwooleConnection> Connection tracker */
     private array $connections = [];
 
-    /** @var array<string, callable(mixed...): void> Callbacks */
+    /** @var array<string, callable> Callbacks */
     private array $callbacks = [];
 
     /** @var \MonkeysLegion\Sockets\Contracts\ConnectionRegistryInterface|null */
@@ -51,10 +51,11 @@ final class SwooleDriver implements DriverInterface
 
     public function listen(string $address, int $port): void
     {
-        $this->server = new Server($address, $port);
+        $server = new Server($address, $port);
+        $this->server = $server;
 
         // Configure Swoole using library-standardized options
-        $this->server->set([
+        $server->set([
             'open_websocket_close_frame' => true,
             'websocket_compression'      => true,
             'package_max_length'         => $this->maxMessageSize,
@@ -63,7 +64,7 @@ final class SwooleDriver implements DriverInterface
             'heartbeat_idle_time'        => $this->heartbeatInterval,
         ]);
 
-        $this->server->on('handshake', function (\Swoole\Http\Request $request, \Swoole\Http\Response $response) {
+        $server->on('handshake', function (\Swoole\Http\Request $request, \Swoole\Http\Response $response) use ($server) {
             $method = $request->server['request_method'] ?? 'GET';
             $uri = $request->server['request_uri'] ?? '/';
             if (!empty($request->server['query_string'])) {
@@ -107,7 +108,7 @@ final class SwooleDriver implements DriverInterface
             }
 
             $fd = $request->fd;
-            $connection = new SwooleConnection($fd, $this->server, [
+            $connection = new SwooleConnection($fd, $server, [
                 'header' => $request->header ?? [],
                 'server' => $request->server ?? [],
                 'get' => $request->get ?? [],
@@ -126,7 +127,7 @@ final class SwooleDriver implements DriverInterface
             return true;
         });
 
-        $this->server->on('message', function (Server $server, Frame $frame) {
+        $server->on('message', function (Server $server, Frame $frame) {
             $fd = $frame->fd;
             $connection = $this->connections[$fd] ?? null;
 
@@ -137,7 +138,7 @@ final class SwooleDriver implements DriverInterface
             }
         });
 
-        $this->server->on('close', function (Server $server, int $fd) {
+        $server->on('close', function (Server $server, int $fd) {
             $connection = $this->connections[$fd] ?? null;
             if ($connection) {
                 if ($this->registry) {
@@ -150,18 +151,18 @@ final class SwooleDriver implements DriverInterface
             }
         });
 
-        $this->server->on('pipeMessage', function (Server $server, int $srcWorkerId, $message) {
+        $server->on('pipeMessage', function (Server $server, int $srcWorkerId, $message) {
             if (isset($this->callbacks['ipc_message'])) {
                 ($this->callbacks['ipc_message'])((string) $message);
             }
         });
 
         foreach ($this->pendingProcesses as $process) {
-            $this->server->addProcess($process);
+            $server->addProcess($process);
         }
 
         $this->logger->info("Swoole WebSocket server starting on {$address}:{$port}");
-        $this->server->start();
+        $server->start();
     }
 
     public function stop(): void

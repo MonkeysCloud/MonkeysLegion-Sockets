@@ -16,7 +16,7 @@ interface ChannelAuthorizerInterface
      * 
      * @param ConnectionInterface $connection The connection requesting to join.
      * @param string $channel The channel name (without prefix).
-     * @param array $parameters Optional parameters (e.g., token, signature).
+     * @param array<string, mixed> $parameters Optional parameters (e.g., token, signature).
      * @return bool True if authorized, false otherwise.
      */
     public function authorize(ConnectionInterface $connection, string $channel, array $parameters = []): bool;

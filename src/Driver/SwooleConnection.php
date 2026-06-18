@@ -56,12 +56,7 @@ class SwooleConnection implements ConnectionInterface
     public function close(int $code = 1000, string $reason = ''): void
     {
         if ($this->server->isEstablished($this->fd)) {
-            // Swoole 4.5+ supports disconnect with code and reason
-            if (\method_exists($this->server, 'disconnect')) {
-                $this->server->disconnect($this->fd, $code, $reason);
-            } else {
-                $this->server->close($this->fd);
-            }
+            $this->server->disconnect($this->fd, $code, $reason);
         }
     }
 

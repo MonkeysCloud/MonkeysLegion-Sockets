@@ -14,13 +14,15 @@ interface FormatterInterface
 {
     /**
      * Format a message for sending over the wire.
+     * 
+     * @param array<string, mixed> $meta
      */
     public function format(string $event, mixed $data = [], array $meta = []): string;
 
     /**
      * Parse a raw payload from the wire into structured data.
      * 
-     * @return array{event: string, data: mixed, meta: array}
+     * @return array{event: string, data: mixed, meta: array<string, mixed>}
      */
     public function parse(string $payload): array;
 }

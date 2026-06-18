@@ -57,9 +57,10 @@ final readonly class JsonMessageSerializer implements MessageSerializerInterface
         /** @var array<string, mixed> $metadata */
         $metadata = (array) ($decoded['metadata'] ?? []);
         $event = $decoded['event'];
+        $eventStr = \is_string($event) ? $event : (\is_scalar($event) ? (string) $event : '');
 
         return new MessageEnvelope(
-            \is_string($event) ? $event : (string) $event,
+            $eventStr,
             $data,
             $metadata
         );

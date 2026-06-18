@@ -47,6 +47,8 @@ class WebSocketServer
 
     /**
      * Join a private channel.
+     * 
+     * @param array<string, mixed> $parameters
      */
     public function joinPrivate(ConnectionInterface|string $connection, string $name, array $parameters = []): bool
     {
@@ -57,7 +59,8 @@ class WebSocketServer
     /**
      * Join a presence channel.
      * 
-     * @return array|false Returns members list if successful, false otherwise.
+     * @param array<string, mixed> $parameters
+     * @return array<int, array{id: string, info: mixed}>|false Returns members list if successful, false otherwise.
      */
     public function joinPresence(ConnectionInterface|string $connection, string $name, array $parameters = []): array|false
     {

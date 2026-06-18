@@ -16,6 +16,7 @@ use Psr\Http\Message\StreamInterface;
  */
 final class MinimalServerRequest implements ServerRequestInterface
 {
+    /** @var array<int|string, mixed> */
     private array $queryParams = [];
 
     /**
@@ -29,7 +30,9 @@ final class MinimalServerRequest implements ServerRequestInterface
     ) {
         $parts = \parse_url($this->target);
         if (isset($parts['query'])) {
-            \parse_str($parts['query'], $this->queryParams);
+            $queryParams = [];
+            \parse_str($parts['query'], $queryParams);
+            $this->queryParams = $queryParams;
         }
     }
 
@@ -37,6 +40,9 @@ final class MinimalServerRequest implements ServerRequestInterface
     public function getRequestTarget(): string { return $this->target; }
     public function getProtocolVersion(): string { return $this->version; }
 
+    /**
+     * @return array<int, string>
+     */
     public function getHeader(string $name): array 
     { 
         $name = \strtolower($name);
@@ -60,7 +66,19 @@ final class MinimalServerRequest implements ServerRequestInterface
 
     // --- STUBS FOR UNUSED METHODS ---
     public function withProtocolVersion(string $version): static { return $this; }
-    public function getHeaders(): array { return $this->headers; }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    public function getHeaders(): array
+    {
+        $normalized = [];
+        foreach ($this->headers as $name => $value) {
+            $normalized[$name] = (array) $value;
+        }
+        return $normalized;
+    }
+
     public function withHeader(string $name, $value): static { return $this; }
     public function withAddedHeader(string $name, $value): static { return $this; }
     public function withoutHeader(string $name): static { return $this; }
@@ -70,20 +88,60 @@ final class MinimalServerRequest implements ServerRequestInterface
     public function withRequestTarget(string $requestTarget): static { return $this; }
     public function getUri(): UriInterface { throw new \RuntimeException('Not implemented'); }
     public function withUri(UriInterface $uri, bool $preserveHost = false): static { return $this; }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function getServerParams(): array { return []; }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function getCookieParams(): array { return []; }
+
+    /**
+     * @param array<string, mixed> $cookies
+     */
     public function withCookieParams(array $cookies): static { return $this; }
+
+    /**
+     * @return array<int|string, mixed>
+     */
     public function getQueryParams(): array { return $this->queryParams; }
+
+    /**
+     * @param array<int|string, mixed> $query
+     */
     public function withQueryParams(array $query): static
     {
         $new = clone $this;
         $new->queryParams = $query;
         return $new;
     }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function getUploadedFiles(): array { return []; }
+
+    /**
+     * @param array<string, mixed> $uploadedFiles
+     */
     public function withUploadedFiles(array $uploadedFiles): static { return $this; }
+
+    /**
+     * @return null|array<string, mixed>|object
+     */
     public function getParsedBody(): mixed { return null; }
+
+    /**
+     * @param null|array<string, mixed>|object $data
+     */
     public function withParsedBody($data): static { return $this; }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function getAttributes(): array { return []; }
     public function getAttribute(string $name, $default = null): mixed { return $default; }
     public function withAttribute(string $name, $value): static { return $this; }

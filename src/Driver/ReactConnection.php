@@ -21,6 +21,9 @@ class ReactConnection implements ConnectionInterface
     private int $lastActivity;
     private bool $isUpgraded = false;
 
+    /**
+     * @param array<string, mixed> $metadata
+     */
     public function __construct(
         private readonly ReactRawConnection $connection,
         private readonly FrameProcessor $frameProcessor,
@@ -84,6 +87,9 @@ class ReactConnection implements ConnectionInterface
         $this->lastActivity = \time();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getMetadata(): array
     {
         return $this->metadata;

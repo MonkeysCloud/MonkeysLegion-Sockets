@@ -18,6 +18,7 @@ use Psr\Http\Message\ResponseFactoryInterface;
  */
 class RateLimitMiddleware implements HandshakeMiddlewareInterface
 {
+    /** @var array<string, array<int, int>> */
     private array $hits = [];
 
     public function __construct(
@@ -28,7 +29,8 @@ class RateLimitMiddleware implements HandshakeMiddlewareInterface
 
     public function handle(ServerRequestInterface $request, callable $next): ResponseInterface
     {
-        $ip = $request->getServerParams()['REMOTE_ADDR'] ?? 'unknown';
+        $remoteIp = $request->getServerParams()['REMOTE_ADDR'] ?? 'unknown';
+        $ip = \is_string($remoteIp) ? $remoteIp : 'unknown';
         $now = \time();
 
         // 1. Cleanup old hits

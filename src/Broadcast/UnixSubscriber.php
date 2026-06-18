@@ -17,7 +17,9 @@ use Throwable;
 class UnixSubscriber
 {
     private bool $running = false;
-    private $server = null;
+
+    /** @var resource|false|null The listening Unix Socket */
+    private mixed $server = null;
 
     public function __construct(
         private readonly string $socketPath,
@@ -47,7 +49,10 @@ class UnixSubscriber
         $this->running = true;
         $this->logger->info("Unix Subscriber listening on {$this->socketPath}");
 
-        while ($this->running) {
+        while ($this->isRunning()) {
+            if (!\is_resource($this->server)) {
+                break;
+            }
             $conn = @\stream_socket_accept($this->server, 1);
             
             if ($conn) {
@@ -64,7 +69,9 @@ class UnixSubscriber
             }
         }
 
-        @\fclose($this->server);
+        if (\is_resource($this->server)) {
+            @\fclose($this->server);
+        }
         if (\file_exists($this->socketPath)) {
             @\unlink($this->socketPath);
         }
