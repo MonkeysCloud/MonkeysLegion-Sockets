@@ -370,6 +370,13 @@ final class StreamSocketDriver implements DriverInterface
             $connection = $this->connections[$streamId] ?? null;
             if ($connection) {
                 $connection->touch();
+                // Populate metadata from the parsed handshake so onOpen handlers
+                // (authenticators, bootstrappers) can read $connection->getMetadata()['get'].
+                $connection->setMetadata([
+                    'get'     => $request->getQueryParams(),
+                    'headers' => $request->getHeaders(),
+                    'uri'     => $request->getRequestTarget(),
+                ]);
                 if ($this->registry) {
                     $this->registry->add($connection);
                 }

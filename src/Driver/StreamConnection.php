@@ -31,7 +31,7 @@ final class StreamConnection implements ConnectionInterface
         private readonly string $id,
         private readonly FrameProcessor $frameProcessor,
         private readonly int $maxWriteBuffer = 5242880, // Default 5MB
-        private readonly array $metadata = []
+        private array $metadata = []
     ) {
         if (!\is_resource($this->resource)) {
             throw new \InvalidArgumentException('Valid resource expected');
@@ -124,6 +124,17 @@ final class StreamConnection implements ConnectionInterface
     public function getMetadata(): array
     {
         return $this->metadata;
+    }
+
+    /**
+     * Merges driver-provided data (e.g. query params, server params) into the
+     * connection metadata so application code can read them via getMetadata().
+     *
+     * @param array<string, mixed> $metadata
+     */
+    public function setMetadata(array $metadata): void
+    {
+        $this->metadata = [...$this->metadata, ...$metadata];
     }
 
     /**
