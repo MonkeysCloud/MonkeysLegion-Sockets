@@ -158,6 +158,16 @@ final class ReactSocketDriver implements DriverInterface
             $rawResponse .= "\r\n";
             
             $connection->send($rawResponse);
+
+            // Populate connection metadata from the parsed handshake request so
+            // that application-level onOpen handlers (authenticators, bootstrappers)
+            // can read query params via $connection->getMetadata()['get'].
+            $connection->setMetadata([
+                'get'     => $request->getQueryParams(),
+                'headers' => $request->getHeaders(),
+                'uri'     => $request->getRequestTarget(),
+            ]);
+
             $connection->setUpgraded(true);
             
             if ($this->registry) {

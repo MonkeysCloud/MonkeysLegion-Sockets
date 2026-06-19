@@ -101,6 +101,17 @@ class ReactConnection implements ConnectionInterface
         return $this->metadata;
     }
 
+    /**
+     * Merges driver-provided data (e.g. query params, server params) into the
+     * connection metadata so application code can read them via getMetadata().
+     *
+     * @param array<string, mixed> $metadata
+     */
+    public function setMetadata(array $metadata): void
+    {
+        $this->metadata = [...$this->metadata, ...$metadata];
+    }
+
     public function isUpgraded(): bool
     {
         return $this->isUpgraded;
