@@ -151,13 +151,26 @@ class SocketServerCommand extends Command
             $originsStr = 'Any (Not Restricted)';
         }
 
+        $formatterName = 'JSON Formatter (Text)';
+        if ($this->webSocketServer) {
+            $formatterClass = \get_class($this->webSocketServer->getFormatter());
+            $formatterName = match ($formatterClass) {
+                \MonkeysLegion\Sockets\Protocol\MsgPackFormatter::class => 'MsgPack Formatter (Binary)',
+                \MonkeysLegion\Sockets\Protocol\JsonFormatter::class => 'JSON Formatter (Text)',
+                default => \basename(\str_replace('\\', '/', $formatterClass)),
+            };
+        } else {
+            $formatterConfig = $this->config->get('sockets.formatter', 'json');
+            $formatterName = $formatterConfig === 'msgpack' ? 'MsgPack Formatter (Binary)' : 'JSON Formatter (Text)';
+        }
+
         $rows = [
             ['Environment Mode', "\033[1;32mProduction\033[0m"],
             ['Listen Address', "\033[1;33m$host:$port\033[0m"],
             ['Driver Class', "\033[1;36m$driverName\033[0m"],
             ['Connection Registry', $registryName],
             ['Broadcaster Type', $broadcasterName],
-            ['Message Formatter', 'JSON (JsonMessageSerializer)'],
+            ['Message Formatter', $formatterName],
             ['Allowed Origins', $originsStr],
         ];
 

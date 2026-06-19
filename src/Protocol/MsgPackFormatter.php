@@ -26,9 +26,10 @@ class MsgPackFormatter implements FormatterInterface
             return MessagePack::pack([
                 'event' => $event,
                 'data' => $data,
-                'meta' => \array_merge($meta, [
+                'meta' => [
+                    ...$meta,
                     't' => \microtime(true)
-                ]),
+                ],
             ]);
         } catch (Throwable $e) {
             throw new RuntimeException("Failed to format MessagePack payload: " . $e->getMessage(), 0, $e);
