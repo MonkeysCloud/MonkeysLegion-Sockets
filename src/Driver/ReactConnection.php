@@ -40,14 +40,20 @@ class ReactConnection implements ConnectionInterface
 
     public function send(string|MessageInterface $message): void
     {
-        // Framework consistent framing for established WebSocket connections
-        $data = $message instanceof MessageInterface 
+        if (!$this->isUpgraded) {
+            // Pre-upgrade: write raw HTTP response bytes (101 Switching Protocols).
+            // FrameProcessor must NOT be called here — framing HTTP headers causes 1006.
+            $data = $message instanceof MessageInterface ? $message->getPayload() : $message;
+            $this->connection->write($data);
+            return;
+        }
+
+        // Post-upgrade: encode the payload into a proper WebSocket frame.
+        $data = $message instanceof MessageInterface
             ? $this->frameProcessor->encode($message->getPayload(), $message->getOpcode())
             : $this->frameProcessor->encode($message);
 
-        // Security: Enforce write buffer size limits (Backpressure)
-        // ReactPHP's default buffer is exposed via the connection property if using standard sockets
-        // We also check vs the internal writeTallies if needed, but here we can check the stream buffer.
+        // Security: Enforce write buffer size limits (Backpressure).
         if (isset($this->connection->buffer) && \property_exists($this->connection->buffer, 'bufferSize')) {
             if ($this->connection->buffer->bufferSize + \strlen($data) > $this->maxWriteBuffer) {
                 throw new RuntimeException("Backpressure limit exceeded for React connection {$this->getId()}");
@@ -103,5 +109,14 @@ class ReactConnection implements ConnectionInterface
     public function setUpgraded(bool $upgraded): void
     {
         $this->isUpgraded = $upgraded;
+    }
+
+    /**
+     * Returns the raw ReactPHP connection for callers that need to write
+     * pre-encoded bytes (e.g. Pong frames) directly without double-framing.
+     */
+    public function getUnderlyingConnection(): ReactRawConnection
+    {
+        return $this->connection;
     }
 }

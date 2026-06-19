@@ -199,9 +199,9 @@ final class ReactSocketDriver implements DriverInterface
                         $connection->close();
                         return;
                     
-                    case 0x9: // Ping
+                    case 0x9: // Ping — respond with a Pong frame, write raw to bypass send()'s encoder
                         $pong = $this->frameProcessor->encode($frame->getPayload(), 0xA);
-                        $connection->send($pong);
+                        $connection->getUnderlyingConnection()->write($pong);
                         break;
                     
                     case 0xA: // Pong
