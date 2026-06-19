@@ -110,11 +110,64 @@ class SocketServerCommand extends Command
 
     private function printBanner(string $host, int $port): void
     {
-        $this->cliLine()->add('🚀 Starting MonkeysLegion WebSocket Server...', 'bright_white', 'bold')->print();
-        $this->cliLine()->add('📡 Driver: ', 'white')->add(\get_class($this->driver), 'cyan')->print();
-        $this->cliLine()->add('🔗 Bind:   ', 'white')->add("$host:$port", 'bright_yellow')->print();
-        $this->cliLine()->add('🛠️ Mode:   ', 'white')->add('Production', 'bright_green')->print();
-        $this->cliLine()->muted(\str_repeat('-', 50))->print();
+        $this->cliLine()
+            ->add('🚀 Starting MonkeysLegion WebSocket Server...', 'bright_white', 'bold')
+            ->print();
+
+        $driverName = match (true) {
+            $this->driver instanceof ReactSocketDriver => 'ReactPHP WebSocket Driver',
+            $this->driver instanceof SwooleDriver => 'Swoole WebSocket Driver',
+            $this->driver instanceof StreamSocketDriver => 'Native Stream Select Driver',
+            default => \get_class($this->driver),
+        };
+
+        $registryName = match (true) {
+            $this->registry instanceof \MonkeysLegion\Sockets\Registry\RedisConnectionRegistry => 'Redis Distributed Registry',
+            $this->registry instanceof \MonkeysLegion\Sockets\Registry\ConnectionRegistry => 'Local In-Memory Registry',
+            default => \get_class($this->registry),
+        };
+
+        $broadcastVal = $this->config->get('sockets.broadcast', 'redis');
+        $broadcast = \is_string($broadcastVal) ? $broadcastVal : 'redis';
+        $broadcasterName = match ($broadcast) {
+            'redis' => 'Redis Pub/Sub Broadcaster',
+            'unix' => 'Unix Domain Socket Broadcaster',
+            'local' => 'Local Broadcaster',
+            default => \ucfirst($broadcast),
+        };
+
+        $security = $this->config->get('sockets.security', []);
+        $securityArr = \is_array($security) ? $security : [];
+        $allowedOrigins = $securityArr['allowed_origins'] ?? null;
+        if (\is_array($allowedOrigins) && \count($allowedOrigins) > 0) {
+            $originsList = [];
+            foreach ($allowedOrigins as $origin) {
+                if (\is_string($origin)) {
+                    $originsList[] = $origin;
+                }
+            }
+            $originsStr = \implode(', ', $originsList);
+        } else {
+            $originsStr = 'Any (Not Restricted)';
+        }
+
+        $rows = [
+            ['Environment Mode', "\033[1;32mProduction\033[0m"],
+            ['Listen Address', "\033[1;33m$host:$port\033[0m"],
+            ['Driver Class', "\033[1;36m$driverName\033[0m"],
+            ['Connection Registry', $registryName],
+            ['Broadcaster Type', $broadcasterName],
+            ['Message Formatter', 'JSON (JsonMessageSerializer)'],
+            ['Allowed Origins', $originsStr],
+        ];
+
+        if ($broadcast === 'unix') {
+            $unixPath = $this->config->get('sockets.unix.path', '/tmp/ml_sockets.sock');
+            $rows[] = ['Unix Socket Path', \is_string($unixPath) ? $unixPath : '/tmp/ml_sockets.sock'];
+        }
+
+        $this->table(['Server Property', 'Configured Value'], $rows);
+        $this->cliLine()->space()->print();
     }
 
     private function installSignalHandlers(): void
