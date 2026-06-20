@@ -94,26 +94,28 @@ final class PhpRedisClientTest extends TestCase
     #[Test]
     public function it_detects_pid_change_and_reconnects(): void
     {
-        $redis = $this->createMock(Redis::class);
-        
-        // Mock connection attributes to verify reconnection details
-        $redis->method('getHost')->willReturn('127.0.0.1');
-        $redis->method('getPort')->willReturn(6379);
-        $redis->method('getTimeout')->willReturn(2.5);
-        $redis->method('getPersistentID')->willReturn('p1');
-        $redis->method('getAuth')->willReturn('secret');
-        $redis->method('getDBNum')->willReturn(2);
+        $oldRedis = $this->createMock(Redis::class);
+        $newRedis = $this->createMock(Redis::class);
 
-        // Reconnect flow
-        $redis->expects($this->once())->method('close');
-        $redis->expects($this->once())->method('pconnect')->with('127.0.0.1', 6379, 2.5, 'p1');
-        $redis->expects($this->once())->method('auth')->with('secret');
-        $redis->expects($this->once())->method('select')->with(2);
+        // Mock connection attributes on the old instance to verify transferring details
+        $oldRedis->method('getHost')->willReturn('127.0.0.1');
+        $oldRedis->method('getPort')->willReturn(6379);
+        $oldRedis->method('getTimeout')->willReturn(2.5);
+        $oldRedis->method('getPersistentID')->willReturn('p1');
+        $oldRedis->method('getAuth')->willReturn('secret');
+        $oldRedis->method('getDBNum')->willReturn(2);
 
-        // Normal delegation call
-        $redis->expects($this->once())->method('del')->with('test-key')->willReturn(1);
+        // Reconnect flow must happen on the NEW instance
+        $newRedis->expects($this->once())->method('pconnect')->with('127.0.0.1', 6379, 2.5, 'p1');
+        $newRedis->expects($this->once())->method('auth')->with('secret');
+        $newRedis->expects($this->once())->method('select')->with(2);
 
-        $client = new PhpRedisClient($redis);
+        // Normal delegation call on the new instance
+        $newRedis->expects($this->once())->method('del')->with('test-key')->willReturn(1);
+
+        $client = new PhpRedisClient($oldRedis, function() use ($newRedis) {
+            return $newRedis;
+        });
 
         // Artificially modify the PID to simulate a process fork
         $ref = new ReflectionClass($client);
@@ -122,5 +124,32 @@ final class PhpRedisClientTest extends TestCase
         $prop->setValue($client, 999999); // Set to a dummy PID that differs from getmypid()
 
         $this->assertSame(1, $client->del('test-key'));
+    }
+
+    #[Test]
+    public function it_does_not_mutate_or_close_shared_redis_reference_in_other_clients_on_fork(): void
+    {
+        $sharedRedis = $this->createMock(Redis::class);
+        $sharedRedis->method('getHost')->willReturn('127.0.0.1');
+        $sharedRedis->method('getPort')->willReturn(6379);
+
+        // The shared Redis instance must NEVER receive a close call because client1 instantiates a new one
+        $sharedRedis->expects($this->never())->method('close');
+
+        $newRedisForClient1 = $this->createMock(Redis::class);
+        $newRedisForClient1->method('del')->willReturn(1);
+
+        $client1 = new PhpRedisClient($sharedRedis, function() use ($newRedisForClient1) {
+            return $newRedisForClient1;
+        });
+        $client2 = new PhpRedisClient($sharedRedis);
+
+        // Simulate fork on client1 only
+        $ref = new ReflectionClass($client1);
+        $prop = $ref->getProperty('connPid');
+        $prop->setValue($client1, 999999);
+
+        // Run command on client1. It should reconnect using factory without affecting the shared object.
+        $this->assertSame(1, $client1->del('test-key'));
     }
 }

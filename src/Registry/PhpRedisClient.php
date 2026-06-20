@@ -17,9 +17,18 @@ use Redis;
 class PhpRedisClient implements RedisClientInterface
 {
     private int $connPid;
+    private Redis $redis;
+    /** @var (callable(): Redis)|null */
+    private mixed $redisFactory;
 
-    public function __construct(private readonly Redis $redis)
+    /**
+     * @param Redis $redis
+     * @param (callable(): Redis)|null $redisFactory
+     */
+    public function __construct(Redis $redis, ?callable $redisFactory = null)
     {
+        $this->redis = $redis;
+        $this->redisFactory = $redisFactory;
         $this->connPid = \getmypid() ?: 0;
     }
 
@@ -86,21 +95,25 @@ class PhpRedisClient implements RedisClientInterface
                     $auth = $this->redis->getAuth();
                     $dbNum = $this->redis->getDBNum();
 
-                    @$this->redis->close();
+                    // Create a completely new Redis instance to avoid closing the shared singleton reference
+                    $newRedis = $this->redisFactory ? ($this->redisFactory)() : new Redis();
 
                     if ($persistentId) {
-                        @$this->redis->pconnect($host, $port, $timeout, $persistentId);
+                        @$newRedis->pconnect($host, $port, $timeout, $persistentId);
                     } else {
-                        @$this->redis->connect($host, $port, $timeout);
+                        @$newRedis->connect($host, $port, $timeout);
                     }
 
                     if ($auth) {
-                        @$this->redis->auth($auth);
+                        @$newRedis->auth($auth);
                     }
-                    @$this->redis->select($dbNum);
+                    @$newRedis->select($dbNum);
+
+                    // Replace current reference
+                    $this->redis = $newRedis;
                 }
             } catch (\Throwable) {
-                // Fail silently and let the command attempt execution
+                // Fail silently and let the operation attempt execution
             }
             $this->connPid = $currentPid;
         }
