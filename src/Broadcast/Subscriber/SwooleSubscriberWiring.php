@@ -45,13 +45,33 @@ final class SwooleSubscriberWiring
             if ($broadcast === 'unix') {
                 $configPath = $this->config->get('sockets.unix.path', '/tmp/ml_sockets.sock');
                 $socketPath = \is_string($configPath) ? $configPath : '/tmp/ml_sockets.sock';
-                $subscriber = new UnixSubscriber($socketPath);
-                $subscriber->listen($handler);
+                $running = true;
+                while ($running) {
+                    try {
+                        $subscriber = new UnixSubscriber($socketPath);
+                        $subscriber->listen($handler);
+                    } catch (\Throwable) {
+                        if (isset($server->master_pid) && $server->master_pid === 0) {
+                            $running = false;
+                        }
+                        \usleep(100000); // Sleep 100ms before retrying
+                    }
+                }
             } elseif ($broadcast === 'redis' && $this->redis) {
                 $configChannel = $this->config->get('sockets.redis.channel', 'ml_sockets:broadcast');
                 $channel       = \is_string($configChannel) ? $configChannel : 'ml_sockets:broadcast';
-                $subscriber    = new RedisSubscriber($this->redis);
-                $subscriber->subscribe([$channel], $handler);
+                $running = true;
+                while ($running) {
+                    try {
+                        $subscriber = new RedisSubscriber($this->redis);
+                        $subscriber->subscribe([$channel], $handler);
+                    } catch (\Throwable) {
+                        if (isset($server->master_pid) && $server->master_pid === 0) {
+                            $running = false;
+                        }
+                        \usleep(500000); // Sleep 500ms before retrying to avoid CPU pegging
+                    }
+                }
             }
         });
     }
