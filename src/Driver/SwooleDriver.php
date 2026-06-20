@@ -62,6 +62,7 @@ final class SwooleDriver implements DriverInterface
             'socket_buffer_size'         => $this->writeBufferSize,
             'heartbeat_check_interval'   => (int) \ceil($this->heartbeatInterval / 2),
             'heartbeat_idle_time'        => $this->heartbeatInterval,
+            'enable_reuse_port'          => true,
         ]);
 
         $server->on('handshake', function (\Swoole\Http\Request $request, \Swoole\Http\Response $response) use ($server) {

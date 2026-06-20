@@ -61,7 +61,11 @@ final class ReactSocketDriver implements DriverInterface
     public function listen(string $address, int $port): void
     {
         $uri = "{$address}:{$port}";
-        $server = new SocketServer($uri);
+        $server = new SocketServer($uri, [
+            'socket' => [
+                'so_reuseaddr' => true,
+            ]
+        ]);
         $this->server = $server;
 
         // Start the heartbeat reaper

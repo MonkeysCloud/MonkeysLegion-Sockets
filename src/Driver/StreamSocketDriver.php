@@ -104,6 +104,13 @@ final class StreamSocketDriver implements DriverInterface
     public function listen(string $address, int $port, array $context = []): void
     {
         $uri = \sprintf('tcp://%s:%d', $address, $port);
+        
+        // Ensure so_reuseaddr is enabled to prevent ports from getting stuck in TIME_WAIT
+        $context['socket'] ??= [];
+        if (\is_array($context['socket'])) {
+            $context['socket']['so_reuseaddr'] ??= true;
+        }
+
         $ctx = \stream_context_create($context);
 
         $server = @\stream_socket_server($uri, $errno, $errstr, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, $ctx);
