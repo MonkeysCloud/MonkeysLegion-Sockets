@@ -11,19 +11,28 @@ use Redis;
  * PhpRedisClient
  * 
  * Concrete implementation of RedisClientInterface wrapping the native phpredis extension.
+ * Automatically handles process forking (e.g. under Swoole or pcntl_fork) by reconnecting
+ * if the PID changes.
  */
-final readonly class PhpRedisClient implements RedisClientInterface
+class PhpRedisClient implements RedisClientInterface
 {
-    public function __construct(private Redis $redis) {}
+    private int $connPid;
+
+    public function __construct(private readonly Redis $redis)
+    {
+        $this->connPid = \getmypid() ?: 0;
+    }
 
     public function sAdd(string $key, string $value): int
     {
+        $this->ensureConnection();
         $result = $this->redis->sAdd($key, $value);
         return \is_int($result) ? $result : (int) $result;
     }
 
     public function sRem(string $key, string $value): int
     {
+        $this->ensureConnection();
         $result = $this->redis->sRem($key, $value);
         return \is_int($result) ? $result : (int) $result;
     }
@@ -31,29 +40,69 @@ final readonly class PhpRedisClient implements RedisClientInterface
     /**
      * @return array<int, string>
      */
-     public function sMembers(string $key): array
-     {
-         $result = $this->redis->sMembers($key);
-         return \is_array($result) ? $result : [];
-     }
- 
-     public function del(string $key): int
-     {
-         $result = $this->redis->del($key);
-         return \is_int($result) ? $result : (int) $result;
-     }
- 
-     public function publish(string $channel, string $message): int
-     {
-         $result = $this->redis->publish($channel, $message);
-         return \is_int($result) ? $result : (int) $result;
-     }
- 
-     /**
-      * @param array<int, string> $channels
-      */
-     public function subscribe(array $channels, callable $callback): void
-     {
-         $this->redis->subscribe($channels, $callback);
-     }
+    public function sMembers(string $key): array
+    {
+        $this->ensureConnection();
+        $result = $this->redis->sMembers($key);
+        return \is_array($result) ? $result : [];
+    }
+
+    public function del(string $key): int
+    {
+        $this->ensureConnection();
+        $result = $this->redis->del($key);
+        return \is_int($result) ? $result : (int) $result;
+    }
+
+    public function publish(string $channel, string $message): int
+    {
+        $this->ensureConnection();
+        $result = $this->redis->publish($channel, $message);
+        return \is_int($result) ? $result : (int) $result;
+    }
+
+    /**
+     * @param array<int, string> $channels
+     */
+    public function subscribe(array $channels, callable $callback): void
+    {
+        $this->ensureConnection();
+        $this->redis->subscribe($channels, $callback);
+    }
+
+    /**
+     * Automatically detect if the process has been forked, and re-establish the connection.
+     */
+    private function ensureConnection(): void
+    {
+        $currentPid = \getmypid() ?: 0;
+        if ($this->connPid !== $currentPid) {
+            try {
+                $host = $this->redis->getHost();
+                if ($host) {
+                    $port = $this->redis->getPort() ?: 6379;
+                    $timeout = $this->redis->getTimeout() ?: 0.0;
+                    $persistentId = $this->redis->getPersistentID();
+                    $auth = $this->redis->getAuth();
+                    $dbNum = $this->redis->getDBNum();
+
+                    @$this->redis->close();
+
+                    if ($persistentId) {
+                        @$this->redis->pconnect($host, $port, $timeout, $persistentId);
+                    } else {
+                        @$this->redis->connect($host, $port, $timeout);
+                    }
+
+                    if ($auth) {
+                        @$this->redis->auth($auth);
+                    }
+                    @$this->redis->select($dbNum);
+                }
+            } catch (\Throwable) {
+                // Fail silently and let the command attempt execution
+            }
+            $this->connPid = $currentPid;
+        }
+    }
 }
