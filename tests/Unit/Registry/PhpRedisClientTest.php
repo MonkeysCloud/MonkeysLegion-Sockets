@@ -94,7 +94,7 @@ final class PhpRedisClientTest extends TestCase
     #[Test]
     public function it_detects_pid_change_and_reconnects(): void
     {
-        $oldRedis = $this->createMock(Redis::class);
+        $oldRedis = $this->createStub(Redis::class);
         $newRedis = $this->createMock(Redis::class);
 
         // Mock connection attributes on the old instance to verify transferring details
@@ -137,7 +137,7 @@ final class PhpRedisClientTest extends TestCase
         $sharedRedis->expects($this->never())->method('close');
 
         $newRedisForClient1 = $this->createMock(Redis::class);
-        $newRedisForClient1->method('del')->willReturn(1);
+        $newRedisForClient1->expects($this->once())->method('del')->with('test-key')->willReturn(1);
 
         $client1 = new PhpRedisClient($sharedRedis, function() use ($newRedisForClient1) {
             return $newRedisForClient1;
