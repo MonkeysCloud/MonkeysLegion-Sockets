@@ -224,7 +224,7 @@ final class StreamSocketDriver implements DriverInterface
             }
 
             // If idle for more than one interval, send a proactive Ping
-            if ($this->handshaked[$id]) {
+            if ($this->handshaked[$id] ?? false) {
                 $connection->ping();
             }
         }
@@ -289,7 +289,7 @@ final class StreamSocketDriver implements DriverInterface
         $this->buffers[$streamId] .= $data;
 
         try {
-            if (!$this->handshaked[$streamId]) {
+            if (!($this->handshaked[$streamId] ?? false)) {
                 $pos = \strpos($this->buffers[$streamId], "\r\n\r\n");
                 if ($pos !== false) {
                     $handshakeData = \substr($this->buffers[$streamId], 0, $pos + 4);
@@ -299,7 +299,7 @@ final class StreamSocketDriver implements DriverInterface
                 }
             }
 
-            if ($this->handshaked[$streamId]) {
+            if ($this->handshaked[$streamId] ?? false) {
                 while (isset($this->buffers[$streamId]) && \strlen($this->buffers[$streamId]) >= 2) {
                     $frame = $this->frameProcessor->decode($this->buffers[$streamId]);
                     if (!$frame) {
