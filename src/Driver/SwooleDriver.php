@@ -128,6 +128,57 @@ final class SwooleDriver implements DriverInterface
             return true;
         });
 
+        // Handle plain HTTP requests (non-WebSocket) — e.g. K8s health probes.
+        // Swoole only fires 'handshake' for WebSocket upgrade requests; plain
+        // HTTP hits 'request' instead.  Without this handler Swoole returns its
+        // built-in 400 Bad Request page.
+        $server->on('request', function (\Swoole\Http\Request $request, \Swoole\Http\Response $response): void {
+            $method = $request->server['request_method'] ?? 'GET';
+            $uri = $request->server['request_uri'] ?? '/';
+            if (!empty($request->server['query_string'])) {
+                $uri .= '?' . $request->server['query_string'];
+            }
+
+            $headers = [];
+            foreach ($request->header ?? [] as $name => $value) {
+                $headers[$name] = $value;
+            }
+
+            $protocol = $request->server['server_protocol'] ?? 'HTTP/1.1';
+            $version = \str_starts_with($protocol, 'HTTP/') ? \substr($protocol, 5) : '1.1';
+
+            $psrRequest = new \MonkeysLegion\Sockets\Handshake\MinimalServerRequest(
+                $method,
+                $uri,
+                $headers,
+                $version
+            );
+
+            try {
+                $psrResponse = $this->negotiator->negotiate($psrRequest);
+                $status = $psrResponse->getStatusCode();
+
+                $response->status($status);
+                foreach ($psrResponse->getHeaders() as $name => $values) {
+                    $response->header($name, \implode(', ', $values));
+                }
+
+                $body = '';
+                try {
+                    $body = (string) $psrResponse->getBody();
+                } catch (\Throwable) {
+                    // MinimalResponse::getBody() throws — that's fine
+                }
+
+                $response->end($body);
+            } catch (Throwable $e) {
+                // No middleware handled it — return 400 (not a valid WS upgrade)
+                $this->logger->debug("HTTP request rejected: " . $e->getMessage());
+                $response->status(400);
+                $response->end('');
+            }
+        });
+
         $server->on('message', function (Server $server, Frame $frame) {
             $fd = $frame->fd;
             $connection = $this->connections[$fd] ?? null;
