@@ -50,6 +50,7 @@ $server->on('message', function($connection, $message) {
 
 For exhaustive, professional documentation covering every layer of the architecture, please see the `docs/` folder:
 
+- [**Package Map (start here)**](docs/00-package-map.md) — entry points, traffic lanes, component roles, driver comparison
 - [Handshake Security](docs/01-handshake.md)
 - [Frame Processing](docs/02-frames.md)
 - [Connection Registry](docs/03-connections.md)
